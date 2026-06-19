@@ -48,7 +48,7 @@ func stripStaticBuckets(o *unstructured.Unstructured) {
 // stripAnnotations removes every annotation not in keepAnnotations, dropping the
 // annotations map if it empties. This is the rule that removes semantic
 // distractors, not just token bloat.
-func stripAnnotations(m map[string]interface{}) {
+func stripAnnotations(m map[string]any) {
 	ann, found, err := unstructured.NestedMap(m, "metadata", "annotations")
 	if !found || err != nil {
 		return
@@ -67,14 +67,14 @@ func stripAnnotations(m map[string]interface{}) {
 
 // stripPodDefaults removes spec-level and per-container fields whose value
 // equals the API server's injected default.
-func stripPodDefaults(m map[string]interface{}) {
+func stripPodDefaults(m map[string]any) {
 	stripDefaultString(m, "Always", "spec", "restartPolicy")
 	stripDefaultString(m, "ClusterFirst", "spec", "dnsPolicy")
 	stripDefaultString(m, "default-scheduler", "spec", "schedulerName")
 	stripDefaultNumber(m, 30, "spec", "terminationGracePeriodSeconds")
 	removeIfEmptyMap(m, "spec", "securityContext")
 
-	forEachContainer(m, func(c map[string]interface{}) {
+	forEachContainer(m, func(c map[string]any) {
 		for _, f := range containerDefaultFields {
 			delete(c, f)
 		}
@@ -85,11 +85,11 @@ func stripPodDefaults(m map[string]interface{}) {
 // stripServiceAccountPlumbing removes the default projected service-account
 // token volume and its matching mounts, which the server injects into every
 // pod and which carry no diagnostic signal.
-func stripServiceAccountPlumbing(m map[string]interface{}) {
+func stripServiceAccountPlumbing(m map[string]any) {
 	if volumes, found, err := unstructured.NestedSlice(m, "spec", "volumes"); found && err == nil {
 		kept := volumes[:0]
 		for _, v := range volumes {
-			if vm, ok := v.(map[string]interface{}); ok {
+			if vm, ok := v.(map[string]any); ok {
 				if name, _, _ := unstructured.NestedString(vm, "name"); strings.HasPrefix(name, "kube-api-access-") {
 					continue
 				}
@@ -99,14 +99,14 @@ func stripServiceAccountPlumbing(m map[string]interface{}) {
 		setOrRemoveSlice(m, kept, "spec", "volumes")
 	}
 
-	forEachContainer(m, func(c map[string]interface{}) {
+	forEachContainer(m, func(c map[string]any) {
 		mounts, found, err := unstructured.NestedSlice(c, "volumeMounts")
 		if !found || err != nil {
 			return
 		}
 		kept := mounts[:0]
 		for _, mt := range mounts {
-			if mtm, ok := mt.(map[string]interface{}); ok {
+			if mtm, ok := mt.(map[string]any); ok {
 				if mp, _, _ := unstructured.NestedString(mtm, "mountPath"); mp == defaultTokenMountPath {
 					continue
 				}
@@ -118,7 +118,7 @@ func stripServiceAccountPlumbing(m map[string]interface{}) {
 }
 
 // pruneStatus keeps only the RCA-critical status fields.
-func pruneStatus(m map[string]interface{}) {
+func pruneStatus(m map[string]any) {
 	status, found, err := unstructured.NestedMap(m, "status")
 	if !found || err != nil {
 		return
@@ -139,14 +139,14 @@ func pruneStatus(m map[string]interface{}) {
 
 // forEachContainer applies fn to each container map under spec.containers and
 // spec.initContainers, writing the mutated slice back.
-func forEachContainer(m map[string]interface{}, fn func(c map[string]interface{})) {
+func forEachContainer(m map[string]any, fn func(c map[string]any)) {
 	for _, key := range []string{"containers", "initContainers"} {
 		containers, found, err := unstructured.NestedSlice(m, "spec", key)
 		if !found || err != nil {
 			continue
 		}
 		for i, c := range containers {
-			cm, ok := c.(map[string]interface{})
+			cm, ok := c.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -157,13 +157,13 @@ func forEachContainer(m map[string]interface{}, fn func(c map[string]interface{}
 	}
 }
 
-func stripDefaultString(m map[string]interface{}, def string, path ...string) {
+func stripDefaultString(m map[string]any, def string, path ...string) {
 	if v, found, err := unstructured.NestedString(m, path...); found && err == nil && v == def {
 		unstructured.RemoveNestedField(m, path...)
 	}
 }
 
-func stripDefaultNumber(m map[string]interface{}, def float64, path ...string) {
+func stripDefaultNumber(m map[string]any, def float64, path ...string) {
 	v, found, err := unstructured.NestedFieldNoCopy(m, path...)
 	if !found || err != nil {
 		return
@@ -173,14 +173,14 @@ func stripDefaultNumber(m map[string]interface{}, def float64, path ...string) {
 	}
 }
 
-func removeIfEmptyMap(m map[string]interface{}, path ...string) {
+func removeIfEmptyMap(m map[string]any, path ...string) {
 	if v, found, err := unstructured.NestedMap(m, path...); found && err == nil && len(v) == 0 {
 		unstructured.RemoveNestedField(m, path...)
 	}
 }
 
 // setOrRemoveSlice writes s back at path, or removes the field if s is empty.
-func setOrRemoveSlice(m map[string]interface{}, s []interface{}, path ...string) {
+func setOrRemoveSlice(m map[string]any, s []any, path ...string) {
 	if len(s) == 0 {
 		unstructured.RemoveNestedField(m, path...)
 		return
@@ -188,7 +188,7 @@ func setOrRemoveSlice(m map[string]interface{}, s []interface{}, path ...string)
 	_ = unstructured.SetNestedSlice(m, s, path...)
 }
 
-func toFloat(v interface{}) (float64, bool) {
+func toFloat(v any) (float64, bool) {
 	switch n := v.(type) {
 	case int64:
 		return float64(n), true

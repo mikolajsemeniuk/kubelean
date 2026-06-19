@@ -148,45 +148,50 @@ func basePod(p Params) *unstructured.Unstructured {
 	if err := basePodTmpl.Execute(&buf, data); err != nil {
 		panic(fmt.Sprintf("base pod template: %v", err)) // template is a constant; failure is a programming error
 	}
+
 	obj, err := distill.FromYAML(buf.Bytes())
 	if err != nil {
 		panic(fmt.Sprintf("parse base pod: %v", err))
 	}
+
 	return obj
 }
-
-// --- status / spec mutation helpers (operate on the single Pod) ---
 
 func setPhase(obj *unstructured.Unstructured, phase string) {
 	_ = unstructured.SetNestedField(obj.Object, phase, "status", "phase")
 }
 
-// firstContainer returns spec.containers[0] for in-place mutation, writing back.
-func firstContainer(obj *unstructured.Unstructured, mutate func(c map[string]interface{})) {
+func firstContainer(obj *unstructured.Unstructured, mutate func(c map[string]any)) {
 	cs, _, _ := unstructured.NestedSlice(obj.Object, "spec", "containers")
 	if len(cs) == 0 {
 		return
 	}
-	if cm, ok := cs[0].(map[string]interface{}); ok {
-		mutate(cm)
-		cs[0] = cm
-		_ = unstructured.SetNestedSlice(obj.Object, cs, "spec", "containers")
+
+	cm, ok := cs[0].(map[string]any)
+	if !ok {
+		return
 	}
+
+	mutate(cm)
+	cs[0] = cm
+	_ = unstructured.SetNestedSlice(obj.Object, cs, "spec", "containers")
 }
 
-// setContainerStatus replaces status.containerStatuses[0] with cs.
-func setContainerStatus(obj *unstructured.Unstructured, cs map[string]interface{}) {
-	_ = unstructured.SetNestedSlice(obj.Object, []interface{}{cs}, "status", "containerStatuses")
+func setContainerStatus(obj *unstructured.Unstructured, cs map[string]any) {
+	_ = unstructured.SetNestedSlice(obj.Object, []any{cs}, "status", "containerStatuses")
 }
 
-// setConditions replaces status.conditions.
-func setConditions(obj *unstructured.Unstructured, conds []interface{}) {
+func setConditions(obj *unstructured.Unstructured, conds []any) {
 	_ = unstructured.SetNestedSlice(obj.Object, conds, "status", "conditions")
 }
 
-func condition(condType, status, reason, message string) map[string]interface{} {
-	return map[string]interface{}{
-		"type": condType, "status": status, "reason": reason, "message": message,
-		"lastProbeTime": nil, "lastTransitionTime": "2026-06-15T09:14:01Z",
+func condition(kind, status, reason, message string) map[string]any {
+	return map[string]any{
+		"type":               kind,
+		"status":             status,
+		"reason":             reason,
+		"message":            message,
+		"lastProbeTime":      nil,
+		"lastTransitionTime": "2026-06-15T09:14:01Z",
 	}
 }

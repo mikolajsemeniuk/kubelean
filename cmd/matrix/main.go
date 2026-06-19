@@ -33,12 +33,15 @@ func (a *acc) pct() float64 {
 	if a.total == 0 {
 		return 0
 	}
+
 	return 100 * float64(a.correct) / float64(a.total)
 }
+
 func (a *acc) meanTok() int {
 	if a.cells == 0 {
 		return 0
 	}
+
 	return a.tokenSum / a.cells
 }
 
@@ -195,6 +198,7 @@ func get(m map[string]*acc, key string) *acc {
 	if m[key] == nil {
 		m[key] = &acc{}
 	}
+
 	return m[key]
 }
 

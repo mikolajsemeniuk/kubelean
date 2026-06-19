@@ -32,26 +32,26 @@ func has(t *testing.T, obj *unstructured.Unstructured, path ...string) bool {
 	return found
 }
 
-func firstContainer(t *testing.T, obj *unstructured.Unstructured) map[string]interface{} {
+func firstContainer(t *testing.T, obj *unstructured.Unstructured) map[string]any {
 	t.Helper()
 	cs, found, err := unstructured.NestedSlice(obj.Object, "spec", "containers")
 	if !found || err != nil || len(cs) == 0 {
 		t.Fatalf("spec.containers missing: found=%v err=%v", found, err)
 	}
-	cm, ok := cs[0].(map[string]interface{})
+	cm, ok := cs[0].(map[string]any)
 	if !ok {
 		t.Fatalf("spec.containers[0] not a map")
 	}
 	return cm
 }
 
-func firstContainerStatus(t *testing.T, obj *unstructured.Unstructured) map[string]interface{} {
+func firstContainerStatus(t *testing.T, obj *unstructured.Unstructured) map[string]any {
 	t.Helper()
 	cs, found, err := unstructured.NestedSlice(obj.Object, "status", "containerStatuses")
 	if !found || err != nil || len(cs) == 0 {
 		t.Fatalf("status.containerStatuses missing: found=%v err=%v", found, err)
 	}
-	cm, ok := cs[0].(map[string]interface{})
+	cm, ok := cs[0].(map[string]any)
 	if !ok {
 		t.Fatalf("status.containerStatuses[0] not a map")
 	}

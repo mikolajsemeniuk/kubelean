@@ -45,18 +45,18 @@ func RandomDrop(obj *unstructured.Unstructured, targetFrac float64, seed int64) 
 // any nested map, except the protected roots and metadata.name/namespace (kept
 // so the object stays identifiable). Removing a key drops its whole subtree, so
 // random-drop can — and sometimes will — delete the field that decides RCA.
-func removablePaths(m map[string]interface{}, prefix []string) [][]string {
+func removablePaths(m map[string]any, prefix []string) [][]string {
 	var paths [][]string
 	for k, v := range m {
 		path := append(append([]string{}, prefix...), k)
 		if isProtected(path) {
-			if child, ok := v.(map[string]interface{}); ok {
+			if child, ok := v.(map[string]any); ok {
 				paths = append(paths, removablePaths(child, path)...)
 			}
 			continue
 		}
 		paths = append(paths, path)
-		if child, ok := v.(map[string]interface{}); ok {
+		if child, ok := v.(map[string]any); ok {
 			paths = append(paths, removablePaths(child, path)...)
 		}
 	}

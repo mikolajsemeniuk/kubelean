@@ -3,18 +3,22 @@ package faults
 import "fmt"
 
 // Generate produces n deterministic instances of the class (seed = index).
-func (fc FaultClass) Generate(n int) []Instance {
+func (c FaultClass) Generate(n int) []Instance {
 	out := make([]Instance, 0, n)
 	for i := range n {
-		p := newParams(i, fc.Difficulty)
-		out = append(out, Instance{
-			Name:      fmt.Sprintf("%s-%03d", fc.Label, i),
-			Resources: fc.Render(p),
-			Truth: GroundTruth{
-				Label: fc.Label, OffendingField: fc.OffendingField,
-				Goal: fc.Goal, Category: fc.Category, Provenance: fc.Provenance,
-			},
-		})
+		truth := GroundTruth{
+			Label:          c.Label,
+			OffendingField: c.OffendingField,
+			Goal:           c.Goal,
+			Category:       c.Category,
+			Provenance:     c.Provenance,
+		}
+		name := fmt.Sprintf("%s-%03d", c.Label, i)
+		p := newParams(i, c.Difficulty)
+		resources := c.Render(p)
+		in := Instance{Name: name, Resources: resources, Truth: truth}
+
+		out = append(out, in)
 	}
 
 	return out
@@ -23,8 +27,8 @@ func (fc FaultClass) Generate(n int) []Instance {
 // GenerateAll produces n instances of every class in the catalog.
 func GenerateAll(n int) []Instance {
 	var out []Instance
-	for _, fc := range Catalog() {
-		out = append(out, fc.Generate(n)...)
+	for _, v := range Catalog() {
+		out = append(out, v.Generate(n)...)
 	}
 
 	return out
@@ -33,9 +37,9 @@ func GenerateAll(n int) []Instance {
 // GenerateByDifficulty produces n instances of every class matching d.
 func GenerateByDifficulty(n int, d Difficulty) []Instance {
 	var out []Instance
-	for _, fc := range Catalog() {
-		if fc.Difficulty == d {
-			out = append(out, fc.Generate(n)...)
+	for _, v := range Catalog() {
+		if v.Difficulty == d {
+			out = append(out, v.Generate(n)...)
 		}
 	}
 

@@ -35,35 +35,37 @@ func Inflate(obj *unstructured.Unstructured, volume, mislead, seed int) *unstruc
 		// noise lives here exclusively → L2 output stays flat across volume.
 		inflateManagedFields(m, volume)
 	}
+
 	if mislead > 0 {
 		inflateAnnotations(m, mislead, seed)
 		inflateLabels(m, mislead, seed)
 		addSidecar(m, mislead, seed)
 	}
+
 	return out
 }
 
 // inflateManagedFields appends realistic managedFields entries — the single
 // largest documented source of `-o yaml` bloat (kubernetes/kubernetes#90933).
-func inflateManagedFields(m map[string]interface{}, level int) {
+func inflateManagedFields(m map[string]any, level int) {
 	managers := []string{"kube-controller-manager", "kubelet", "kube-scheduler", "metrics-server", "cluster-autoscaler", "kyverno", "argocd-application-controller", "flux-source-controller"}
 	existing, _, _ := unstructured.NestedSlice(m, "metadata", "managedFields")
 	for i := 0; i < level*len(managers); i++ {
 		mgr := managers[i%len(managers)]
-		entry := map[string]interface{}{
+		entry := map[string]any{
 			"manager":    mgr,
 			"operation":  "Update",
 			"apiVersion": "v1",
 			"time":       fmt.Sprintf("2026-06-1%dT0%d:%02d:%02dZ", i%9, i%9, i%60, i%60),
 			"fieldsType": "FieldsV1",
-			"fieldsV1": map[string]interface{}{
-				"f:metadata": map[string]interface{}{
-					"f:labels":      map[string]interface{}{fmt.Sprintf("f:noise-%d", i): map[string]interface{}{}},
-					"f:annotations": map[string]interface{}{fmt.Sprintf("f:ops.internal/seen-%d", i): map[string]interface{}{}},
+			"fieldsV1": map[string]any{
+				"f:metadata": map[string]any{
+					"f:labels":      map[string]any{fmt.Sprintf("f:noise-%d", i): map[string]any{}},
+					"f:annotations": map[string]any{fmt.Sprintf("f:ops.internal/seen-%d", i): map[string]any{}},
 				},
-				"f:status": map[string]interface{}{
-					"f:conditions":        map[string]interface{}{},
-					"f:containerStatuses": map[string]interface{}{},
+				"f:status": map[string]any{
+					"f:conditions":        map[string]any{},
+					"f:containerStatuses": map[string]any{},
 				},
 			},
 		}
@@ -78,7 +80,7 @@ func inflateManagedFields(m map[string]interface{}, level int) {
 // inflateAnnotations adds boilerplate ops annotations. Some intentionally
 // mention OTHER fault classes (stale incident notes), a realistic distractor
 // that L1/L2 do not specifically target but which co-occurs with the bloat.
-func inflateAnnotations(m map[string]interface{}, level, seed int) {
+func inflateAnnotations(m map[string]any, level, seed int) {
 	ann, _, _ := unstructured.NestedStringMap(m, "metadata", "annotations")
 	if ann == nil {
 		ann = map[string]string{}
@@ -96,7 +98,7 @@ func inflateAnnotations(m map[string]interface{}, level, seed int) {
 	_ = unstructured.SetNestedStringMap(m, ann, "metadata", "annotations")
 }
 
-func inflateLabels(m map[string]interface{}, level, seed int) {
+func inflateLabels(m map[string]any, level, seed int) {
 	lab, _, _ := unstructured.NestedStringMap(m, "metadata", "labels")
 	if lab == nil {
 		lab = map[string]string{}
@@ -109,29 +111,29 @@ func inflateLabels(m map[string]interface{}, level, seed int) {
 
 // addSidecar injects a healthy sidecar container plus its container status —
 // common in real clusters (service mesh, log shippers) and pure noise for RCA.
-func addSidecar(m map[string]interface{}, level, seed int) {
+func addSidecar(m map[string]any, level, seed int) {
 	if level <= 0 {
 		return
 	}
 	containers, _, _ := unstructured.NestedSlice(m, "spec", "containers")
-	sidecar := map[string]interface{}{
+	sidecar := map[string]any{
 		"name":            "istio-proxy",
 		"image":           "docker.io/istio/proxyv2:1.24.2",
 		"imagePullPolicy": "IfNotPresent",
-		"resources":       map[string]interface{}{"limits": map[string]interface{}{"cpu": "2", "memory": "1Gi"}, "requests": map[string]interface{}{"cpu": "100m", "memory": "128Mi"}},
-		"ports":           []interface{}{map[string]interface{}{"containerPort": int64(15090), "name": "http-envoy-prom", "protocol": "TCP"}},
+		"resources":       map[string]any{"limits": map[string]any{"cpu": "2", "memory": "1Gi"}, "requests": map[string]any{"cpu": "100m", "memory": "128Mi"}},
+		"ports":           []any{map[string]any{"containerPort": int64(15090), "name": "http-envoy-prom", "protocol": "TCP"}},
 	}
 	containers = append(containers, sidecar)
 	_ = unstructured.SetNestedSlice(m, containers, "spec", "containers")
 
 	statuses, _, _ := unstructured.NestedSlice(m, "status", "containerStatuses")
-	sidecarStatus := map[string]interface{}{
+	sidecarStatus := map[string]any{
 		"name":         "istio-proxy",
 		"image":        "docker.io/istio/proxyv2:1.24.2",
 		"ready":        true,
 		"started":      true,
 		"restartCount": int64(0),
-		"state":        map[string]interface{}{"running": map[string]interface{}{"startedAt": "2026-06-17T08:00:00Z"}},
+		"state":        map[string]any{"running": map[string]any{"startedAt": "2026-06-17T08:00:00Z"}},
 	}
 	statuses = append(statuses, sidecarStatus)
 	_ = unstructured.SetNestedSlice(m, statuses, "status", "containerStatuses")

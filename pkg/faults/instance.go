@@ -82,8 +82,9 @@ func (p Params) podName() string {
 	return fmt.Sprintf("%s-%s-%s", p.App, p.Hash[:8], randSuffix(p.rng, 5))
 }
 
+const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+
 func randSuffix(r *rand.Rand, n int) string {
-	const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = alphabet[r.Intn(len(alphabet))]

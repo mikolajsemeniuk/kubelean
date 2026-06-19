@@ -27,7 +27,7 @@ func stripLossless(o *unstructured.Unstructured) {
 
 // removeAnnotation deletes one annotation key, dropping the annotations map
 // entirely if it becomes empty.
-func removeAnnotation(m map[string]interface{}, key string) {
+func removeAnnotation(m map[string]any, key string) {
 	ann, found, err := unstructured.NestedMap(m, "metadata", "annotations")
 	if !found || err != nil {
 		return
