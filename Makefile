@@ -10,28 +10,7 @@ TEMP    ?= 0.4
 VOLUME  ?= 0
 MISLEAD ?= 0
 
-.PHONY: all build test vet fmt tidy bench matrix matrix-hard matrix-noise models clean
-
-all: build test
-
-build:
-	go build ./...
-
-test:
-	go test ./...
-
-vet:
-	go vet ./...
-
-fmt:
-	gofmt -s -w .
-
-tidy:
-	go mod tidy
-
-## models: pull the default local model used by the experiments
-models:
-	ollama pull $(MODEL)
+.PHONY: bench matrix matrix-hard matrix-noise
 
 ## bench: token reduction L0 -> L1 -> L2 on one representative resource
 bench:
@@ -48,6 +27,3 @@ matrix-hard:
 ## matrix-noise: full benchmark with structural + semantic noise added pre-distill
 matrix-noise:
 	go run ./cmd/matrix -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -volume $(VOLUME) -mislead $(MISLEAD)
-
-clean:
-	go clean ./...
