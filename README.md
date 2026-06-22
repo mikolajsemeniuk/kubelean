@@ -45,8 +45,10 @@ the fault catalog and its grounding in prior benchmarks.
   (`managedFields`) and semantic (stale distractor annotations).
 - **`pkg/distill`** — the distillation transform. `L0` raw, `L1` lossless
   (server-managed noise), `L2` static buckets (≈ kubectl-neat, plus annotation
-  stripping). `RandomDrop` is the H2 control: random cutting to the same token
-  budget. (`L3`–`L5` saliency models are future work.)
+  stripping), `L3` corpus-entropy saliency (drop fields constant across the
+  corpus), `L4` goal-conditioned embedding-grounding (keep fields whose embedding
+  grounds the symptom), `L5` oracle leave-one-field-out saliency (the gold upper
+  bound). `RandomDrop` is the H2 control: random cutting to the same token budget.
 - **`pkg/eval`** — the closed-set label set and the Ollama RCA client that forces
   a structured `{root_cause_label, offending_field}` answer.
 
@@ -57,8 +59,10 @@ pkg/distill/   distillation transform + token counter + H2 random-drop (tested)
 pkg/faults/    fault-scenario generator + noise inflation (tested)
 pkg/eval/      closed-set labels + structured-output RCA client
 cmd/bench/     token reduction L0 -> L1 -> L2 on one resource
-cmd/matrix/    full benchmark: RCA accuracy for L0 vs L2 vs random-drop
+cmd/matrix/    full benchmark: RCA accuracy for L0/L1/L2/L3 (+L4) vs random-drop
+cmd/oracle/    L5 leave-one-field-out oracle saliency map (expensive)
 docs/          fault taxonomy + running findings log
+paper/         LaTeX source; matrix.gen.tex / oracle.gen.tex auto-generated
 ```
 
 ## Prerequisites
@@ -85,7 +89,12 @@ Tune the benchmark size and model:
 make matrix MODEL=llama3.1:8b N=5 K=5         # 5 instances/class, 5 repeats
 make matrix-hard                              # only the hard (bundle) classes
 make matrix-noise VOLUME=8 MISLEAD=4          # add structural + semantic noise
+make matrix-l4                                # include the L4 goal-conditioned profile
+make oracle                                   # L5 leave-one-field-out saliency map
 ```
+
+`make matrix-l4` and the L4 profile additionally need the embedding model
+(`make models` pulls `nomic-embed-text`).
 
 `N` = instances per fault class, `K` = repeats per instance per profile.
 

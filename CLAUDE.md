@@ -228,7 +228,9 @@ The pipeline is **generate → distill → evaluate**. See `README.md` + `Makefi
   Levels **implemented: L0 raw, L1 lossless (strip server-managed noise), L2 static buckets
   (defaults + SA plumbing + status boilerplate + annotations)**. `RandomDrop` = the **H2 control**
   (random cutting to a token budget). `OllamaCounter` (model-tokenizer token counting via
-  `prompt_eval_count`). `ToYAML/FromYAML`. **L3/L4/L5 saliency models are NOT built yet.** Tested.
+  `prompt_eval_count`). `ToYAML/FromYAML`. **L3 (corpus-entropy, `entropy.go`), L4
+  (goal-conditioned embedding-grounding, `grounding.go`+`embed.go`), L5 (oracle
+  leave-one-field-out, `oracle.go`) are now built.** Tested.
 - `pkg/faults/` — the **data generator** (replaces `kind`). `Catalog()` = **10 fault classes**
   (`catalog.go`), each rendering a faulty resource + ground-truth label + deciding field.
   `basePod` = realistic bloated Pod template. `Inflate(obj, volume, mislead, seed)` = two noise
@@ -242,8 +244,13 @@ The pipeline is **generate → distill → evaluate**. See `README.md` + `Makefi
   class/difficulty, with optional `-volume`/`-mislead` noise.
 - `docs/fault-taxonomy.md` — the 12-class taxonomy + its grounding in Cloud-OpsBench / OperAID.
 - `docs/findings.md` — **running results log (M0→M2). Read it for the latest numbers.**
-- **NOT built:** L3/L4/L5, statistics (McNemar/cluster bootstrap/Holm), the MCP server
-  (`cmd/kubelean`), `paper/`.
+- `cmd/oracle/` — the **L5 oracle**: leave-one-field-out saliency per class +
+  whether it recovers the injected `OffendingField`. Expensive (one RCA pass per
+  field); small sample by default. Writes `paper/oracle.gen.tex`.
+- `paper/` — LaTeX source; `cmd/matrix` writes `paper/matrix.gen.tex`, `cmd/oracle`
+  writes `paper/oracle.gen.tex` (both regenerated each run; need `booktabs`).
+- **NOT built:** statistics (McNemar/cluster bootstrap/Holm), the MCP server
+  (`cmd/kubelean`), the `paper/` prose itself.
 
 ---
 

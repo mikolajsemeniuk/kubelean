@@ -22,6 +22,7 @@ func stripLossless(o *unstructured.Unstructured) {
 	for _, path := range losslessMetadataNoise {
 		unstructured.RemoveNestedField(m, path...)
 	}
+
 	removeAnnotation(m, lastAppliedAnnotation)
 }
 
