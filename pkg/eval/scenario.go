@@ -4,9 +4,9 @@
 // ground truth (no human, no LLM judge).
 package eval
 
-// Labels is the closed set the model must choose from. It is the
-// root_cause_label column of docs/fault-taxonomy.md. Keeping it fixed and
-// shared across instances makes the classification non-trivial and the scoring
+// Labels is the closed set the model must choose from — the root_cause_label
+// vocabulary (see the fault taxonomy in CLAUDE.md). Keeping it fixed and shared
+// across instances makes the classification non-trivial and the scoring
 // exact-match.
 var Labels = []string{
 	"CrashLoopBackOff",

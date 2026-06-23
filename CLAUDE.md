@@ -239,55 +239,106 @@ The pipeline is **generate → distill → evaluate**. See `README.md` + `Makefi
 - `pkg/eval/` — closed-set `Labels` + `RCAClient.Diagnose()` (Ollama, forces structured
   `{root_cause_label, offending_field}` JSON; returns the exact prompt token count so no separate
   tokenizer call is needed).
-- `cmd/bench/` — token reduction L0→L1→L2 on one generated resource.
-- `cmd/matrix/` — the **main experiment**: RCA accuracy for L0 vs L2 vs random-drop, per
-  class/difficulty, with optional `-volume`/`-mislead` noise.
-- `docs/fault-taxonomy.md` — the 12-class taxonomy + its grounding in Cloud-OpsBench / OperAID.
-- `docs/findings.md` — **running results log (M0→M2). Read it for the latest numbers.**
-- `cmd/oracle/` — the **L5 oracle**: leave-one-field-out saliency per class +
-  whether it recovers the injected `OffendingField`. Expensive (one RCA pass per
-  field); small sample by default. Writes `paper/oracle.gen.tex`.
-- `paper/` — LaTeX source; `cmd/matrix` writes `paper/matrix.gen.tex`, `cmd/oracle`
-  writes `paper/oracle.gen.tex` (both regenerated each run; need `booktabs`).
+- `pkg/bench/` — **shared experiment harness** (so the `cmd/`s stay thin). `Renderer.Bundle`
+  serializes a resource bundle under any profile (L0..L4/rand); `Run` does the two-pass sweep
+  (Pass 1 serialize everything — keeps an L4 embedder loaded; Pass 2 the RCA calls); `Acc`
+  accumulator; `Corpus`/`Inflate` helpers; `TexEscape`/`WriteFile` for the `.gen.tex` output.
+- **`cmd/` = one small command per paper artifact** (like llmbench). Each writes
+  `paper/<name>.gen.tex` (`-tex ""` to skip) and can run independently/in parallel:
+  - `cmd/tokens/` — token reduction L0→L1→L2→L3 (no LLM, model tokenizer) → `tokens.gen.tex`.
+  - `cmd/accuracy/` — main RCA benchmark, acc+tokens per profile + by difficulty (H1/H2/H3;
+    `-l4` adds the goal-conditioned profile) → `accuracy.gen.tex`.
+  - `cmd/perclass/` — per-fault-class accuracy across profiles (H5) → `perclass.gen.tex`.
+  - `cmd/noise/` — structural (`-volumes`) + semantic (`-mislead`) robustness sweeps →
+    `noise.gen.tex`.
+  - `cmd/oracle/` — **L5 oracle** leave-one-field-out saliency per class + whether it recovers
+    the injected `OffendingField`. Expensive (one RCA pass per field); tiny sample by default →
+    `oracle.gen.tex`.
+- `paper/` — LaTeX source; every `*.gen.tex` is auto-generated (regenerated each run; need
+  `booktabs`). `paper/README.md` maps file→command. **`docs/` was removed** (findings live in
+  the `.gen.tex` artifacts + git history; the taxonomy/provenance is the section below).
 - **NOT built:** statistics (McNemar/cluster bootstrap/Holm), the MCP server
   (`cmd/kubelean`), the `paper/` prose itself.
 
+## Fault taxonomy & provenance (was `docs/fault-taxonomy.md`)
+
+The benchmark does **not** invent its own fault space — it anchors to two prior benchmarks
+(defuses the "why roll your own benchmark?" objection):
+- **Cloud-OpsBench** (arXiv 2603.00468, `github.com/LLM4Ops/Cloud-OpsBench`) — taxonomy + label
+  backbone: 40 root-cause types in **8 categories** (Admission, Scheduling, Startup, Runtime,
+  Service routing, Performance, Infrastructure, App-code) on k8s v1.31. Ground truth is
+  `{fault_taxonomy, fault_object, root_cause}` ≈ our `{category, offending_field, root_cause_label}`.
+  **License: none → cite & derive the taxonomy, do NOT re-host their files.** Their YAML is clean
+  reconstructed spec (no bloat), so it is a *label* source, not the raw bloated `-o yaml` we prune.
+- **OperAID** (`github.com/EricssonResearch/operaid`, **MIT**) — methodological sibling; source of
+  the Config/Scaling/Network classes and of the closed-loop fault-injection→diagnosis→remediation
+  →execution-verification pipeline cited for the (stretch) remediation leg.
+
+**The key gap / our novelty:** neither benchmark keeps the bloated `kubectl get -o yaml`
+(managedFields/status/defaults) — everyone discards it as noise. That discarded bloat is exactly
+kubelean's raw material, so we source *labels/fault content* from prior art but **generate the
+bloated output ourselves** (`pkg/faults`, server-faithful re-inflation). Each fault class carries
+exactly one `OffendingField` path → clean localization metric + a well-defined L5 leave-one-out
+target. `Catalog()` ships 10 classes (CrashLoop, OOMKilled, ImagePull×2, ReadinessProbe,
+Pending_InsufficientResources, CreateContainerConfigError, Scaling_ZeroReplicas, and the
+Service/NetworkPolicy **bundles**); `eval.Labels` is the wider closed set (14) the LLM must pick
+from. The per-class `Provenance` field records which prior benchmark each class derives from.
+
 ---
 
-## Status & next steps (live — updated after M2)
+## Status & next steps (live — updated mid-M3)
 
-**Milestones:** M0 ✅ (distill + tokens) · M1 ✅ (first accuracy / testbench) · M2 ✅ (full generator
-matrix, H1+H2) · **M3 next** (full protocol + statistics) · M4 (MCP server / OSS-wedge) · M5 (paper).
+**Milestones:** M0 ✅ (distill + tokens) · M1 ✅ (first accuracy) · M2 ✅ (full generator matrix,
+H1+H2) · **M3 in progress** — L3/L4/L5 mechanisms ✅ **built**; statistics still TODO · M4 (MCP
+server / OSS-wedge) · M5 (paper).
 
-**Headline results so far (details in `docs/findings.md`):**
-- L1 lossless strip = −21% tokens (free, RCA-safe); L2 = −41–55% tokens.
-- **H1 supported in aggregate:** L2 **beats** L0 (74.0% vs 69.3% RCA) at ~55% of the tokens —
-  pruning *improves* accuracy, not just cost (qwen2.5:7b, 10 classes, 15 trials/class).
-- **H2 strongly supported:** equal-budget random-drop (54.7%) ≪ structure-aware L2 (74.0%) →
-  it's *which* fields are kept, not the cutting.
-- **Large per-class heterogeneity (→ H5):** OOMKilled +67pp (distill removes the distracting
-  CrashLoop symptom), ReadinessProbe −27pp (distill *hurts* — reproducible), bundles at 0% floor.
+**Headline results (latest run; regenerate the numbers via `make accuracy` → `paper/accuracy.gen.tex`,
+no static log file anymore):** qwen2.5:7b, n=3, k=3, all 10 classes:
+| profile | acc | tok |
+|---|---|---|
+| L0 | 68.9% | 1154 |
+| **L1** | **81.1%** | 863 |
+| L2 | 74.4% | 634 |
+| L3 | 70.0% | 657 |
+| rand | 45.6% | 527 |
+- **L1 is now the headline:** lossless strip gives **+12pp AND −25% tokens with zero info loss** —
+  cleaner than the old "L2 beats L0" story (no over-pruning caveat). Likely driven by removing the
+  `last-applied-configuration` blob, not managedFields per se → **worth ablating** (managedFields-only
+  vs annotation-only).
+- **Non-monotonic curve = H1:** accuracy peaks at L1 then declines as you cut more (L2/L3) — the
+  sweet-spot shape, not a trade-off.
+- **H2 strongly supported:** random-drop (45.6%) ≪ every structured profile at equal/smaller budget.
+- **L3 is goal-blind, and it shows:** `Scaling_ZeroReplicas` 100%→**0%** under L3 because Deployment
+  is the *only* fault class of its Kind → `spec.replicas` is corpus-constant → entropy 0 → dropped
+  (the deciding field!). Conversely L3 **fixes** `ReadinessProbe` (→100%) where L2 regressed (→44%).
+  This blindness is the motivation for L4.
+- **Bundles still ~0% at every level** = 7b model-capacity floor, not distillation (re-run on a
+  stronger model to separate the two).
 
 **Locked methodology decisions (do not re-litigate):**
 - Eval is **offline**; data comes from the **pure-Go generator** (seeded, in-RAM), not `kind`.
 - Taxonomy/labels **derived from Cloud-OpsBench** (no license → cite, don't re-host) + **OperAID**
-  (MIT) for Config/Scaling/Network classes.
+  (MIT). See the taxonomy section above.
 - Token counting uses the **model tokenizer** (`prompt_eval_count`), folded into `Diagnose`.
+- L3 corpus is **cross-class per Kind** (NOT per-class: within one class the deciding field is
+  constant → would be dropped). L4 anchor = symptom text from `status` + goal; `status` is never
+  pruned. L5 base = L1; identity fields (apiVersion/kind, name/namespace) never removed.
 
-**Open for M3:**
-- **L4 (goal-conditioned distillation)** — the heterogeneity (esp. ReadinessProbe regression)
-  is the scientific hook; L4 should keep the right fields per fault class.
-- Investigate the ReadinessProbe L2 regression (evidence survives L2 → likely Liveness/Readiness
-  confusion under leaner context).
-- Re-run **bundles on a stronger model** (separate model-capacity floor from distillation).
-- **Statistics:** McNemar (paired binary), cluster bootstrap by fault-family, Holm/BH correction.
-- Budget/Pareto sweep; optional dump-to-disk for a frozen, reviewer-inspectable benchmark.
+**Open for M3 (next):**
+- **Statistics** (the main gap): McNemar (paired binary), cluster bootstrap by fault-family,
+  Holm/BH correction — wire as their own `cmd/` → `.gen.tex`.
+- **Tune `-l4thresh`** (default 0.5 is a guess) on a dev split; report on test. Same for `-l3thresh`.
+- **Ablate the L1 gain** (managedFields-only vs last-applied-only).
+- Re-run **bundles on a stronger model**; Pareto/budget sweep.
 
 **Gotchas for the next session:**
 - The dev machine is **memory-constrained (swaps under load)** → keep runs modest (n≤5, k≤5);
-  a too-large run looks "hung" but is just crawling. **Kill stray `cmd/matrix` processes** before
-  measuring latency. Ollama serializes per model — don't run two models at once.
-- `cmd/matrix` prints **only at the end** (buffers output) — empty mid-run output is normal.
+  a too-large run looks "hung" but is just crawling. Ollama serializes per model — **don't run two
+  models at once**; the experiment cmds print final tables only at the end (progress bars are on
+  stderr). `cmd/accuracy`/`perclass` re-run the full sweep independently, so running both = 2× LLM
+  cost (intentional: they're standalone artifact generators).
+- **L4** needs the embed model loaded; `pkg/bench.Run` renders all profiles first (Pass 1) so Ollama
+  doesn't thrash between the embed and RCA models. `make all-l4` runs accuracy+perclass with `-l4`.
 
 ## Key references
 - k8s agents: HolmesGPT (CNCF), k8sgpt, kubectl-ai, KubeIntellect (arXiv 2509.02449),

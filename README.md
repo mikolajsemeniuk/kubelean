@@ -25,16 +25,17 @@ human and no LLM-judge.
 - **H3** — goal-conditioned distillation beats static buckets.
 - **H5** — effects are heterogeneous across fault classes and robust across models.
 
-See `docs/findings.md` for current pilot results and `docs/fault-taxonomy.md` for
-the fault catalog and its grounding in prior benchmarks.
+Each experiment command writes a `paper/<name>.gen.tex` table for the article;
+the fault catalog and its grounding in prior benchmarks are documented in
+`CLAUDE.md`.
 
 ## How it works
 
 ```
-   pkg/faults            pkg/distill              pkg/eval
-  generate a       ->   prune the YAML     ->    ask a local LLM       ->   score
-  faulty resource       (L0/L1/L2/random)        for the root cause          (exact-match
-  (+ ground truth)                               (closed-set JSON)            vs ground truth)
+   pkg/faults            pkg/distill                pkg/eval
+  generate a       ->   prune the YAML       ->    ask a local LLM     ->   score
+  faulty resource       (L0/L1/L2/L3/L4/rand)      for the root cause        (exact-match
+  (+ ground truth)                                 (closed-set JSON)          vs ground truth)
 ```
 
 - **`pkg/faults`** — deterministic generator of faulty resources. 10 fault
@@ -55,14 +56,16 @@ the fault catalog and its grounding in prior benchmarks.
 ## Repository layout
 
 ```
-pkg/distill/   distillation transform + token counter + H2 random-drop (tested)
+pkg/distill/   distillation transforms L0..L5 + token counter + H2 random-drop (tested)
 pkg/faults/    fault-scenario generator + noise inflation (tested)
 pkg/eval/      closed-set labels + structured-output RCA client
-cmd/bench/     token reduction L0 -> L1 -> L2 on one resource
-cmd/matrix/    full benchmark: RCA accuracy for L0/L1/L2/L3 (+L4) vs random-drop
-cmd/oracle/    L5 leave-one-field-out oracle saliency map (expensive)
-docs/          fault taxonomy + running findings log
-paper/         LaTeX source; matrix.gen.tex / oracle.gen.tex auto-generated
+pkg/bench/     shared harness: profile rendering, the RCA sweep, LaTeX helpers
+cmd/tokens/    token reduction L0->L1->L2->L3        -> paper/tokens.gen.tex
+cmd/accuracy/  RCA accuracy + tokens per profile      -> paper/accuracy.gen.tex
+cmd/perclass/  per-fault-class accuracy               -> paper/perclass.gen.tex
+cmd/noise/     structural + semantic robustness       -> paper/noise.gen.tex
+cmd/oracle/    L5 leave-one-field-out saliency        -> paper/oracle.gen.tex
+paper/         LaTeX source; every *.gen.tex is auto-generated
 ```
 
 ## Prerequisites
@@ -72,31 +75,31 @@ paper/         LaTeX source; matrix.gen.tex / oracle.gen.tex auto-generated
 - At least one local model. The defaults use `qwen2.5:7b-instruct`:
 
 ```sh
-make models        # pulls qwen2.5:7b-instruct
+make models        # pulls qwen2.5:7b-instruct + nomic-embed-text
 ```
 
 ## Quickstart
 
 ```sh
 make test          # unit tests (no Ollama needed)
-make bench         # token reduction L0 -> L1 -> L2 (needs Ollama)
-make matrix        # full RCA benchmark: L0 vs L2 vs random-drop (needs Ollama)
+make tokens        # token reduction L0->L1->L2->L3 (needs Ollama)
+make accuracy      # main RCA benchmark, acc + tokens per profile (needs Ollama)
+make perclass      # per-fault-class accuracy
+make noise         # structural + semantic robustness sweeps
+make oracle        # L5 leave-one-field-out saliency map (expensive)
+make paper         # regenerate every paper/*.gen.tex
 ```
 
-Tune the benchmark size and model:
+Tune size and model (each command also takes the flags directly):
 
 ```sh
-make matrix MODEL=llama3.1:8b N=5 K=5         # 5 instances/class, 5 repeats
-make matrix-hard                              # only the hard (bundle) classes
-make matrix-noise VOLUME=8 MISLEAD=4          # add structural + semantic noise
-make matrix-l4                                # include the L4 goal-conditioned profile
-make oracle                                   # L5 leave-one-field-out saliency map
+make accuracy MODEL=llama3.1:8b N=5 K=5   # 5 instances/class, 5 repeats
+make all-l4                               # accuracy + perclass with the L4 profile
 ```
 
-`make matrix-l4` and the L4 profile additionally need the embedding model
-(`make models` pulls `nomic-embed-text`).
-
-`N` = instances per fault class, `K` = repeats per instance per profile.
+`N` = instances per fault class, `K` = repeats per instance per profile. The L4
+goal-conditioned profile additionally needs the embedding model (`make models`
+pulls `nomic-embed-text`).
 
 ## Provenance & licensing
 

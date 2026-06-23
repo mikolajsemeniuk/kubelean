@@ -15,12 +15,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/schollz/progressbar/v3"
 
+	"github.com/mikolajsemeniuk/kubelean/pkg/bench"
 	"github.com/mikolajsemeniuk/kubelean/pkg/distill"
 	"github.com/mikolajsemeniuk/kubelean/pkg/eval"
 	"github.com/mikolajsemeniuk/kubelean/pkg/faults"
@@ -179,13 +179,13 @@ func writeTeX(path, model string, n, k int, temp float64, top int, results []cla
 	fmt.Fprintf(&b, "%% Run: model=%s n=%d k=%d temp=%.2f top=%d\n", model, n, k, temp, top)
 	fmt.Fprintf(&b, "%% Requires \\usepackage{booktabs} in the preamble.\n\n")
 	fmt.Fprintf(&b, "\\begin{table}[t]\n  \\centering\n")
-	fmt.Fprintf(&b, "  \\caption{L5 oracle leave-one-field-out saliency: the most decisive field per fault class and whether it recovers the injected deciding field (\\texttt{%s}, $n{=}%d$, $k{=}%d$).}\n", texEscape(model), n, k)
+	fmt.Fprintf(&b, "  \\caption{L5 oracle leave-one-field-out saliency: the most decisive field per fault class and whether it recovers the injected deciding field (\\texttt{%s}, $n{=}%d$, $k{=}%d$).}\n", bench.TexEscape(model), n, k)
 	fmt.Fprintf(&b, "  \\label{tab:oracle-saliency}\n")
 	fmt.Fprintf(&b, "  \\begin{tabular}{llrc}\n    \\toprule\n")
 	fmt.Fprintf(&b, "    Fault class & Top oracle field & Saliency & Recovers \\\\\n    \\midrule\n")
 	for _, r := range results {
 		if len(r.ranked) == 0 {
-			fmt.Fprintf(&b, "    %s & \\multicolumn{3}{l}{\\emph{bundle (skipped)}} \\\\\n", texEscape(r.fc.Label))
+			fmt.Fprintf(&b, "    %s & \\multicolumn{3}{l}{\\emph{bundle (skipped)}} \\\\\n", bench.TexEscape(r.fc.Label))
 			continue
 		}
 		t := r.ranked[0]
@@ -193,23 +193,11 @@ func writeTeX(path, model string, n, k int, temp float64, top int, results []cla
 		if r.recovers {
 			rec = "yes"
 		}
-		fmt.Fprintf(&b, "    %s & \\texttt{%s} & %+.2f & %s \\\\\n", texEscape(r.fc.Label), texEscape(t.Path), t.Saliency, rec)
+		fmt.Fprintf(&b, "    %s & \\texttt{%s} & %+.2f & %s \\\\\n", bench.TexEscape(r.fc.Label), bench.TexEscape(t.Path), t.Saliency, rec)
 	}
 	fmt.Fprintf(&b, "    \\bottomrule\n  \\end{tabular}\n\\end{table}\n")
 
-	if dir := filepath.Dir(path); dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
-		}
-	}
-	return os.WriteFile(path, []byte(b.String()), 0o644)
-}
-
-func texEscape(s string) string {
-	return strings.NewReplacer(
-		`\`, `\textbackslash{}`, `_`, `\_`, `%`, `\%`, `&`, `\&`,
-		`#`, `\#`, `$`, `\$`, `{`, `\{`, `}`, `\}`,
-	).Replace(s)
+	return bench.WriteFile(path, b.String())
 }
 
 func fatal(format string, args ...any) {

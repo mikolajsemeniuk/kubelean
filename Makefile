@@ -1,43 +1,46 @@
 # kubelean — experiment runner.
 #
-# All experiment targets need a local Ollama (`ollama serve`) and the model.
-# Unit tests (`make test`) need neither.
+# Each experiment is a small command that writes one paper/<name>.gen.tex table,
+# so they can be run independently (and in parallel). All need a local Ollama
+# (`ollama serve`) + the model; unit tests (`make test`) need neither.
 
 MODEL   ?= qwen2.5:7b-instruct
 EMBED   ?= nomic-embed-text
 N       ?= 3
 K       ?= 3
 TEMP    ?= 0.4
-VOLUME  ?= 0
-MISLEAD ?= 0
 
-.PHONY: models bench matrix matrix-hard matrix-noise matrix-l4 oracle
+.PHONY: models tokens accuracy perclass noise oracle paper all-l4
 
 ## models: pull the local models the experiments default to
 models:
 	ollama pull $(MODEL)
 	ollama pull $(EMBED)
 
-## bench: token reduction L0 -> L1 -> L2 on one representative resource
-bench:
-	go run ./cmd/bench -model $(MODEL)
+## tokens: token reduction L0->L1->L2->L3 (no LLM) -> paper/tokens.gen.tex
+tokens:
+	go run ./cmd/tokens -model $(MODEL) -n $(N)
 
-## matrix: full RCA benchmark, all classes, L0/L1/L2/L3 vs random-drop; writes paper/matrix.gen.tex
-matrix:
-	go run ./cmd/matrix -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -difficulty all
+## accuracy: main RCA benchmark, acc+tokens per profile / difficulty -> paper/accuracy.gen.tex
+accuracy:
+	go run ./cmd/accuracy -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP)
 
-## matrix-hard: only the hard (multi-resource bundle) classes
-matrix-hard:
-	go run ./cmd/matrix -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -difficulty hard
+## perclass: per-fault-class accuracy across profiles -> paper/perclass.gen.tex
+perclass:
+	go run ./cmd/perclass -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP)
 
-## matrix-noise: full benchmark with structural + semantic noise added pre-distill
-matrix-noise:
-	go run ./cmd/matrix -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -volume $(VOLUME) -mislead $(MISLEAD)
+## noise: structural (volume) + semantic (mislead) robustness sweeps -> paper/noise.gen.tex
+noise:
+	go run ./cmd/noise -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP)
 
-## matrix-l4: full benchmark including the L4 goal-conditioned profile (needs EMBED)
-matrix-l4:
-	go run ./cmd/matrix -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -difficulty all -l4 -embed $(EMBED)
-
-## oracle: L5 leave-one-field-out saliency map (expensive; small sample by default)
+## oracle: L5 leave-one-field-out saliency (expensive; small sample) -> paper/oracle.gen.tex
 oracle:
 	go run ./cmd/oracle -model $(MODEL) -n 1 -k 1 -temp $(TEMP)
+
+## paper: regenerate every .gen.tex (accuracy/perclass/oracle support -l4 via *-l4 vars)
+paper: tokens accuracy perclass noise oracle
+
+## all-l4: accuracy + perclass including the L4 goal-conditioned profile (needs EMBED)
+all-l4:
+	go run ./cmd/accuracy -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -l4 -embed $(EMBED)
+	go run ./cmd/perclass -model $(MODEL) -n $(N) -k $(K) -temp $(TEMP) -l4 -embed $(EMBED)
