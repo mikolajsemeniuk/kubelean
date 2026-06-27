@@ -1,9 +1,9 @@
 // Package heatmap enumerates and removes individual fields from a (possibly
 // multi-document) Kubernetes YAML stream, for leave-one-out ablation tests.
 //
-// It works at the yaml.Node level: a field is removed surgically, leaving every
-// other node — order, comments, formatting — untouched. Each operation reparses
-// the source from scratch, so variants are fully isolated from one another.
+// It works at the yaml.Node level: a field is removed surgically, then any
+// ancestor left empty is collapsed, so a removal leaves no husk. Each operation
+// reparses the source from scratch, so variants are fully isolated.
 package heatmap
 
 import (
@@ -16,15 +16,62 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Target identifies one removable field in the stream.
-type Target struct {
-	Doc     int    // index of the document in the --- joined stream
-	Kind    string // resource kind (Deployment, ConfigMap, ...), for disambiguation
-	Pointer string // RFC 6901 JSON Pointer within the document, e.g. /spec/replicas
+// Category classifies a Target by its structural role. The three kinds measure
+// different things (a scalar field vs a whole label map vs a list element) and
+// are meant to be reported as separate populations.
+type Category string
+
+const (
+	CategoryScalar    Category = "scalar"     // a leaf scalar field: image, replicas, name
+	CategoryAtomicMap Category = "atomic-map" // a flat user-key map removed whole: labels, data
+	CategorySeqElem   Category = "seq-elem"   // one element of a sequence: containers/0, envFrom/1
+)
+
+// An atomic map is one whose value is an *open, user-defined key set* — you
+// invent the keys (labels, annotations, ConfigMap data) — so ablating a single
+// inner key is meaningless; the whole map is the unit, emitted whole and not
+// descended into. Closed-schema maps with fixed fields (metadata,
+// resources{requests,limits}, secretRef{name}) are NOT atomic: they are
+// descended so each field is measured separately, and collapse cleans up husks.
+
+// universalAtomic are open-key-set maps that are atomic in EVERY Kind — there is
+// no cross-Kind collision, so they need no Kind scoping. Matched by key name.
+var universalAtomic = map[string]bool{
+	"labels":      true,
+	"matchLabels": true,
+	"annotations": true,
+	"data":        true,
+	"stringData":  true,
 }
 
-// Keys returns every removable field in the stream: one Target per map key and
-// per sequence element, at every depth.
+// kindAtomic handles keys that are an open key set in some Kinds but a
+// closed-schema structural node in others, so a bare name is ambiguous. The
+// canonical case: a Service's spec.selector is a flat label map (atomic), while
+// a Deployment/StatefulSet/Job selector wraps matchLabels (structural — must be
+// descended). Add an entry per Kind that genuinely needs it; do not duplicate
+// the universals here.
+var kindAtomic = map[string]map[string]bool{
+	"Service": {"selector": true},
+}
+
+// isAtomicMap reports whether the map at key, inside a document of the given
+// Kind, is an atomic unit (emitted whole, not descended).
+func isAtomicMap(kind, key string) bool {
+	return universalAtomic[key] || kindAtomic[kind][key]
+}
+
+// Target identifies one removable field in the stream.
+type Target struct {
+	Doc      int      // index of the document in the --- joined stream
+	Kind     string   // resource kind (Deployment, ConfigMap, ...), for disambiguation
+	Pointer  string   // RFC 6901 JSON Pointer within the document, e.g. /spec/replicas
+	Category Category // structural role of this target
+}
+
+// Keys returns the removable fields of the stream under the four-category
+// taxonomy: scalar leaves and atomic maps and sequence elements are emitted;
+// structural maps and whole sequences are descended into but not emitted (their
+// removal would delete a whole subtree — a trivial, information-free ablation).
 func Keys(src string) ([]Target, error) {
 	roots, err := parseDocs(src)
 	if err != nil {
@@ -40,8 +87,11 @@ func Keys(src string) ([]Target, error) {
 	return out, nil
 }
 
-// Remove deletes the field at t and returns the re-serialized stream. The input
-// is reparsed, so src itself is never mutated.
+// Remove deletes the field at t and returns the re-serialized stream. After the
+// delete it collapses any ancestor that became empty, so removing a sole child
+// leaves no husk: removing .../secretRef/name drops the whole secretRef and its
+// now-empty envFrom entry, not "secretRef: {}". The husk is what would leak a
+// field's former presence and mask its saliency. src is reparsed, never mutated.
 func Remove(src string, t Target) (string, error) {
 	roots, err := parseDocs(src)
 	if err != nil {
@@ -57,7 +107,8 @@ func Remove(src string, t Target) (string, error) {
 		return "", errors.New("empty pointer")
 	}
 
-	parent, err := navigate(roots[t.Doc], segs[:len(segs)-1])
+	root := roots[t.Doc]
+	parent, err := navigate(root, segs[:len(segs)-1])
 	if err != nil {
 		return "", err
 	}
@@ -66,6 +117,8 @@ func Remove(src string, t Target) (string, error) {
 		return "", err
 	}
 
+	collapse(root, segs)
+
 	return encodeDocs(roots)
 }
 
@@ -73,17 +126,48 @@ func walk(n *yaml.Node, ptr string, doc int, kind string, out *[]Target) {
 	switch n.Kind {
 	case yaml.MappingNode:
 		for i := 0; i+1 < len(n.Content); i += 2 {
-			child := ptr + "/" + escape(n.Content[i].Value)
-			*out = append(*out, Target{doc, kind, child})
-			walk(n.Content[i+1], child, doc, kind, out)
+			key := n.Content[i].Value
+			val := n.Content[i+1]
+			child := ptr + "/" + escape(key)
+			switch {
+			case val.Kind == yaml.ScalarNode:
+				*out = append(*out, Target{doc, kind, child, CategoryScalar})
+			case val.Kind == yaml.MappingNode && isAtomicMap(kind, key):
+				*out = append(*out, Target{doc, kind, child, CategoryAtomicMap})
+			default: // structural map or sequence: descend, do not emit
+				walk(val, child, doc, kind, out)
+			}
 		}
 	case yaml.SequenceNode:
-		for i, c := range n.Content {
+		for i, el := range n.Content {
 			child := ptr + "/" + strconv.Itoa(i)
-			*out = append(*out, Target{doc, kind, child})
-			walk(c, child, doc, kind, out)
+			*out = append(*out, Target{doc, kind, child, CategorySeqElem})
+			walk(el, child, doc, kind, out)
 		}
 	}
+}
+
+// collapse walks up the removed node's ancestor chain and drops every ancestor
+// that is now an empty map or sequence, stopping at the first that still holds
+// something (everything above it is then non-empty too).
+func collapse(root *yaml.Node, segs []string) {
+	for i := len(segs) - 1; i >= 1; i-- {
+		node, err := navigate(root, segs[:i])
+		if err != nil || !isEmptyContainer(node) {
+			break
+		}
+		grandparent, err := navigate(root, segs[:i-1])
+		if err != nil {
+			break
+		}
+		if err := removeChild(grandparent, segs[i-1]); err != nil {
+			break
+		}
+	}
+}
+
+func isEmptyContainer(n *yaml.Node) bool {
+	return (n.Kind == yaml.MappingNode || n.Kind == yaml.SequenceNode) && len(n.Content) == 0
 }
 
 func navigate(n *yaml.Node, segs []string) (*yaml.Node, error) {
