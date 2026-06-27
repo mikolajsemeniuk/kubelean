@@ -37,10 +37,56 @@ type ChatInput struct {
 type ChatOptions struct {
 	Temperature float64 `json:"temperature"`
 	Seed        int64   `json:"seed"`
+	// NumCtx must be set explicitly: Ollama's default context window silently
+	// truncates a long (multi-document) prompt, so the model would diagnose a
+	// half-cut manifest. NumPredict caps the (tiny JSON) answer. Both omitted
+	// fall back to Ollama defaults.
+	NumCtx     int `json:"num_ctx,omitempty"`
+	NumPredict int `json:"num_predict,omitempty"`
 }
 
 type ChatOutput struct {
 	Response string `json:"response"`
+}
+
+// Digest returns the content digest of a pulled model (from /api/tags). A tag
+// like "qwen2.5:7b-instruct" can be re-pulled and change weights underneath you;
+// recording the digest pins the exact model for reproducibility.
+func (o *Ollama) Digest(ctx context.Context, model string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.Host+"/api/tags", nil)
+	if err != nil {
+		return "", fmt.Errorf("ollama: build tags request: %w", err)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("ollama: tags http: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(res.Body)
+		return "", fmt.Errorf("ollama: tags status %d: %s", res.StatusCode, string(raw))
+	}
+
+	var out struct {
+		Models []struct {
+			Name   string `json:"name"`
+			Model  string `json:"model"`
+			Digest string `json:"digest"`
+		} `json:"models"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		return "", fmt.Errorf("ollama: decode tags: %w", err)
+	}
+
+	for _, m := range out.Models {
+		if m.Name == model || m.Model == model {
+			return m.Digest, nil
+		}
+	}
+
+	return "", fmt.Errorf("ollama: model %q not found in tags", model)
 }
 
 // Chat runs one prompt through the model and returns its raw text response.
@@ -60,8 +106,8 @@ func (o *Ollama) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: http: %w", err)
 	}
-	defer res.Body.Close()
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(res.Body)
 		return ChatOutput{}, fmt.Errorf("ollama: status %d: %s", res.StatusCode, string(raw))
