@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>kubelean · saliency viewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-2xl font-bold">kubelean — saliency heatmap</h1>
+    <p id="meta" class="text-sm text-slate-500 mb-4">loading…</p>
+
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+      <input id="search" type="text" placeholder="filter field…"
+             class="border border-slate-300 rounded px-3 py-1.5 text-sm w-56">
+      <select id="scenario" class="border border-slate-300 rounded px-3 py-1.5 text-sm"></select>
+      <label class="text-sm flex items-center gap-1.5 select-none">
+        <input id="salientOnly" type="checkbox"> only saliency &gt; 0
+      </label>
+      <div class="flex items-center gap-2 text-xs text-slate-500 ml-auto">
+        <span>0.0</span>
+        <span class="inline-block h-3 w-28 rounded"
+              style="background:linear-gradient(90deg,#fff,rgba(220,38,38,.75))"></span>
+        <span>1.0 signal</span>
+      </div>
+    </div>
+
+    <div class="overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm max-h-[80vh]">
+      <table class="w-full text-sm border-collapse">
+        <thead class="bg-slate-100 text-slate-600 sticky top-0 z-10">
+          <tr>
+            <th data-k="scenario"  class="px-3 py-2 cursor-pointer select-none">Scenario ↕</th>
+            <th data-k="kind"      class="px-3 py-2 cursor-pointer select-none">Kind ↕</th>
+            <th data-k="field"     class="px-3 py-2 text-left cursor-pointer select-none">Field ↕</th>
+            <th data-k="saliency"  class="px-3 py-2 cursor-pointer select-none">Saliency ↕</th>
+            <th data-k="predicted" class="px-3 py-2 cursor-pointer select-none">Predicted ↕</th>
+            <th data-k="offending" class="px-3 py-2 text-left cursor-pointer select-none">Model blamed</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p id="count" class="text-xs text-slate-400 mt-2"></p>
+  </div>
+
+  <script>
+    let data = { model: "", rows: [] };
+    let sortKey = "saliency", sortDir = -1;
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+    // saliency in [-1,1]: >0 red (signal), <0 blue (noise added), 0 neutral.
+    function cellStyle(v) {
+      if (v > 0) return `background:rgba(220,38,38,${0.12 + 0.63 * Math.min(1, v)})`;
+      if (v < 0) return `background:rgba(37,99,235,${0.12 + 0.63 * Math.min(1, -v)})`;
+      return "";
+    }
+
+    function render() {
+      const q = $("#search").value.toLowerCase();
+      const sc = $("#scenario").value;
+      const salient = $("#salientOnly").checked;
+
+      const rows = data.rows
+        .filter((r) =>
+          (!q || r.field.toLowerCase().includes(q)) &&
+          (!sc || r.scenario === sc) &&
+          (!salient || r.saliency > 0))
+        .sort((a, b) => {
+          const x = a[sortKey], y = b[sortKey];
+          return typeof x === "string" ? sortDir * x.localeCompare(y) : sortDir * (x - y);
+        });
+
+      $("#rows").innerHTML = rows.map((r) => `
+        <tr class="border-t border-slate-100 hover:bg-slate-50">
+          <td class="px-3 py-1.5 text-center text-xs text-slate-500">${esc(r.scenario)}</td>
+          <td class="px-3 py-1.5 text-center">${esc(r.kind)}</td>
+          <td class="px-3 py-1.5 font-mono text-xs">${esc(r.field)}</td>
+          <td class="px-3 py-1.5 text-center font-semibold tabular-nums" style="${cellStyle(r.saliency)}">${r.saliency.toFixed(2)}</td>
+          <td class="px-3 py-1.5 text-center text-xs">${esc(r.predicted)}</td>
+          <td class="px-3 py-1.5 font-mono text-xs text-slate-500">${esc(r.offending)}</td>
+        </tr>`).join("");
+
+      $("#count").textContent = `${rows.length} / ${data.rows.length} rows`;
+    }
+
+    function setupSort() {
+      document.querySelectorAll("th[data-k]").forEach((th) => {
+        th.onclick = () => {
+          const k = th.dataset.k;
+          if (sortKey === k) sortDir *= -1;
+          else { sortKey = k; sortDir = k === "saliency" ? -1 : 1; }
+          render();
+        };
+      });
+    }
+
+    fetch("/api/data")
+      .then((r) => r.json())
+      .then((d) => {
+        data = d;
+        const salient = d.rows.filter((r) => r.saliency > 0).length;
+        $("#meta").textContent = `model: ${d.model} · ${d.rows.length} ablations · ${salient} with signal`;
+        const scs = [...new Set(d.rows.map((r) => r.scenario))];
+        $("#scenario").innerHTML = `<option value="">all scenarios</option>` + scs.map((s) => `<option>${esc(s)}</option>`).join("");
+        ["#search", "#scenario", "#salientOnly"].forEach((s) => $(s).addEventListener("input", render));
+        setupSort();
+        render();
+      })
+      .catch((e) => { $("#meta").textContent = "failed to load /api/data: " + e; });
+  </script>
+</body>
+</html>
