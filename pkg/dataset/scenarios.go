@@ -16,22 +16,36 @@ const (
 // Scenario is one faulty instance of the m1 dataset: the rendered manifest(s)
 // plus the ground truth used to score root-cause analysis in m2.
 type Scenario struct {
-	Name           string   // stable id
-	Group          string   // batch/category id; run related scenarios together (make run-<group>)
-	FaultClass     string   // ground-truth label
-	DecidingFields []string // canonical field-keys whose values encode the fault
-	YAML           string   // rendered manifest(s); multi-document scenarios are --- joined
+	Name           string          // stable id
+	Group          string          // batch/category id; run related scenarios together (make run-<group>)
+	FaultClass     string          // ground-truth label
+	DecidingFields []DecidingField // fault loci, Kind-qualified; encode the fault
+	YAML           string          // rendered manifest(s); multi-document scenarios are --- joined
 }
 
-// Scenarios returns the m1 fault catalog filtered to one group.
-func Scenarios(group string) []Scenario {
-	all := []Scenario{
+// DecidingField is a ground-truth fault locus: the field whose value encodes the
+// fault, qualified by the Kind of the document it lives in — so metadata.name in
+// a Secret is not confused with metadata.name in a Deployment. Path is dotted
+// with [] for array levels, e.g.
+// spec.template.spec.containers[].envFrom[].secretRef.name. It is resolved to
+// concrete pointers against a scenario's YAML by heatmap.ResolveLeaves.
+type DecidingField struct {
+	Kind string
+	Path string
+}
+
+// All returns the whole m1 fault catalog, across groups.
+func All() []Scenario {
+	return []Scenario{
 		selectorLabelMismatch(),
 		secretWrongName(),
 	}
+}
 
+// Scenarios returns the catalog filtered to one group.
+func Scenarios(group string) []Scenario {
 	var out []Scenario
-	for _, s := range all {
+	for _, s := range All() {
 		if s.Group == group {
 			out = append(out, s)
 		}
@@ -60,9 +74,9 @@ func selectorLabelMismatch() Scenario {
 		Name:       "selector-label-mismatch",
 		Group:      GroupSelectorMismatch,
 		FaultClass: "SelectorLabelMismatch",
-		DecidingFields: []string{
-			"spec.selector.matchLabels.app",
-			"spec.template.metadata.labels.app",
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.selector.matchLabels.app"},
+			{Kind: "Deployment", Path: "spec.template.metadata.labels.app"},
 		},
 		YAML: joinDocs(dep),
 	}
@@ -104,9 +118,9 @@ func secretWrongName() Scenario {
 		Name:       "secret-ref-wrong-name",
 		Group:      GroupSecretRef,
 		FaultClass: "SecretRefNotFound",
-		DecidingFields: []string{
-			"spec.template.spec.containers[].envFrom[].secretRef.name",
-			"metadata.name",
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].secretRef.name"},
+			{Kind: "Secret", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, cm, sec),
 	}
