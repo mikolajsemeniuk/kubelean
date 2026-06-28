@@ -5,26 +5,39 @@ import (
 	"text/template"
 )
 
+// Group names — the batch keys used to produce related scenarios together
+// (make run-<group>). Defined here so scenarios and callers share one source of
+// truth instead of magic strings.
+const (
+	GroupSelectorMismatch = "selector-mismatch"
+	GroupSecretRef        = "secret-ref"
+)
+
 // Scenario is one faulty instance of the m1 dataset: the rendered manifest(s)
 // plus the ground truth used to score root-cause analysis in m2.
 type Scenario struct {
 	Name           string   // stable id
+	Group          string   // batch/category id; run related scenarios together (make run-<group>)
 	FaultClass     string   // ground-truth label
 	DecidingFields []string // canonical field-keys whose values encode the fault
 	YAML           string   // rendered manifest(s); multi-document scenarios are --- joined
 }
 
-// joinDocs concatenates manifests into a single multi-document YAML stream.
-func joinDocs(docs ...string) string {
-	return strings.Join(docs, "\n---\n") + "\n"
-}
-
-// Scenarios returns the m1 fault catalog.
-func Scenarios() []Scenario {
-	return []Scenario{
+// Scenarios returns the m1 fault catalog filtered to one group.
+func Scenarios(group string) []Scenario {
+	all := []Scenario{
 		selectorLabelMismatch(),
 		secretWrongName(),
 	}
+
+	var out []Scenario
+	for _, s := range all {
+		if s.Group == group {
+			out = append(out, s)
+		}
+	}
+
+	return out
 }
 
 // selectorLabelMismatch is a single Deployment whose pod template labels do not
@@ -45,6 +58,7 @@ func selectorLabelMismatch() Scenario {
 
 	out := Scenario{
 		Name:       "selector-label-mismatch",
+		Group:      GroupSelectorMismatch,
 		FaultClass: "SelectorLabelMismatch",
 		DecidingFields: []string{
 			"spec.selector.matchLabels.app",
@@ -88,6 +102,7 @@ func secretWrongName() Scenario {
 
 	out := Scenario{
 		Name:       "secret-ref-wrong-name",
+		Group:      GroupSecretRef,
 		FaultClass: "SecretRefNotFound",
 		DecidingFields: []string{
 			"spec.template.spec.containers[].envFrom[].secretRef.name",
@@ -107,5 +122,11 @@ func mustRender(t *template.Template, data any) string {
 	if err := t.Execute(&sb, data); err != nil {
 		panic(err)
 	}
+
 	return strings.TrimSpace(sb.String())
+}
+
+// joinDocs concatenates manifests into a single multi-document YAML stream.
+func joinDocs(docs ...string) string {
+	return strings.Join(docs, "\n---\n") + "\n"
 }

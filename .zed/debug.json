@@ -1,0 +1,31 @@
+// Zed debug configs. cwd is pinned to the repo root so the programs' relative
+// paths (data/, paper/) resolve the same as `go run ./cmd/...` from the root,
+// not relative to the file the debugger was launched from.
+[
+  {
+    "label": "heatmap (selector-mismatch)",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "$ZED_WORKTREE_ROOT/cmd/heatmap",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": ["-group", "selector-mismatch"]
+  },
+  {
+    "label": "heatmap (secret-ref)",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "$ZED_WORKTREE_ROOT/cmd/heatmap",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": ["-group", "secret-ref"]
+  },
+  {
+    "label": "render",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "$ZED_WORKTREE_ROOT/cmd/render",
+    "cwd": "$ZED_WORKTREE_ROOT"
+  }
+]
