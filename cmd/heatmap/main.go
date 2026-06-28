@@ -16,6 +16,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mikolajsemeniuk/kubelean/pkg/dataset"
@@ -32,35 +33,38 @@ var (
 	group                 string
 	k, numCtx, numPredict int
 	temp                  float64
+)
 
-	// schema constrains the model to clean JSON with a fixed fault_class vocabulary
-	// (mirrors the scenarios' FaultClass labels + NoFaultFound). Extend the enum when
-	// you add scenarios.
-	schema = map[string]any{
+// buildSchema constrains the model to clean JSON whose fault_class is one of the
+// catalog's classes (dataset.FaultClasses() — the single source of truth).
+func buildSchema(classes []string) map[string]any {
+	return map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"fault_class": map[string]any{
-				"type": "string",
-				"enum": []string{"SelectorLabelMismatch", "SecretRefNotFound", "NoFaultFound"},
-			},
+			"fault_class":     map[string]any{"type": "string", "enum": classes},
 			"offending_field": map[string]any{"type": "string"},
 		},
 		"required": []string{"fault_class", "offending_field"},
 	}
+}
 
-	// systemPrompt frames the root-cause task. The schema enforces the JSON shape and
-	// the fault_class vocabulary, so scoring is a plain string compare. The "reduced"
-	// framing is load-bearing: variants have fields removed for the ablation, and we
-	// must stop the model from reading an absent field as a fault in itself.
-	systemPrompt = `You are a senior Kubernetes SRE performing root-cause analysis.
+// buildPrompt frames the root-cause task. The class vocabulary (name + the check
+// that defines it) is joined in from lines, not hardcoded, so it always matches
+// the schema enum. The descriptions give the model the diagnostic procedure
+// instead of a label cue. The "reduced" framing is load-bearing: variants have
+// fields removed for the ablation, and we must stop the model from reading an
+// absent field as a fault in itself.
+func buildPrompt(lines []string) string {
+	return `You are a senior Kubernetes SRE performing root-cause analysis.
 You are given one or more manifests as returned by "kubectl get -o yaml".
 The manifests may have been deliberately reduced — some fields removed to save context.
 Treat every manifest as valid and well-formed: a missing field is not itself a fault.
 Diagnose the root cause only from the information that is present.
 At most one root-cause fault is present; the manifests may also be healthy.
-fault_class must be one of: SelectorLabelMismatch, SecretRefNotFound, NoFaultFound.
+Set fault_class to exactly one of these classes — check each in turn:
+` + strings.Join(lines, "\n") + `
 Set offending_field to the YAML path most responsible, or "none".`
-)
+}
 
 func main() {
 	flag.StringVar(&host, "host", "http://localhost:11434", "Ollama host")
@@ -77,6 +81,9 @@ func main() {
 	if len(scenarios) == 0 {
 		log.Fatalf("no scenarios in group %q", group)
 	}
+
+	schema := buildSchema(dataset.FaultClasses())
+	prompt := buildPrompt(dataset.FaultLines())
 
 	ctx := context.Background()
 	client := providers.NewOllama(host)
@@ -104,7 +111,7 @@ func main() {
 		var recs []heatmap.Record
 
 		// baseline: the full bundle, k trials.
-		in.Prompt = systemPrompt + "\n\nManifests:\n" + s.YAML
+		in.Prompt = prompt + "\n\nManifests:\n" + s.YAML
 		baseCorrect := 0
 		for i := 0; i < k; i++ {
 			r := trial(ctx, client, in, i, s, digest)
@@ -139,7 +146,7 @@ func main() {
 				invalid++
 			}
 
-			in.Prompt = systemPrompt + "\n\nManifests:\n" + reduced
+			in.Prompt = prompt + "\n\nManifests:\n" + reduced
 			doc, field := t.Doc, t.Pointer
 			for i := 0; i < k; i++ {
 				r := trial(ctx, client, in, i, s, digest)

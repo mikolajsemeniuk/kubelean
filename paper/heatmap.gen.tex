@@ -8,6 +8,30 @@
 \toprule
 Scenario & Kind & Field & Valid & Saliency \\
 \midrule
+configmap-ref-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/kind} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/name} & no & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/labels} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/name} & no & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/image} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0/containerPort} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1/secretRef/name} & yes & 0.00 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & yes & 0.00 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/kind} & yes & 0.00 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & yes & 0.00 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/data} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/apiVersion} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/kind} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/namespace} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/type} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/stringData} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/kind} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/metadata/name} & no & 0.00 \\
@@ -20,8 +44,8 @@ secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/na
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/image} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0/containerPort} & yes & 0.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0} & yes & 0.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name} & yes & 0.00 \\
+secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/0/envFrom/0}} & yes & 0.20 \\
+secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name}} & yes & 0.20 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & yes & 0.00 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/kind} & yes & 0.00 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.00 \\
@@ -34,7 +58,7 @@ secret-ref-wrong-name & Secret & \texttt{/type} & yes & 0.00 \\
 secret-ref-wrong-name & Secret & \texttt{/stringData} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/kind} & yes & 0.00 \\
-selector-label-mismatch & Deployment & \texttt{/metadata/name} & no & 0.00 \\
+selector-label-mismatch & Deployment & \textbf{\texttt{/metadata/name}} & no & 0.20 \\
 selector-label-mismatch & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/metadata/labels} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\
@@ -53,11 +77,24 @@ selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0/
 \toprule
 Scenario & Kind & Field & Valid & Recognized \\
 \midrule
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0} & no & 1.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0} & yes & 0.40 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name} & yes & 0.40 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.20 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0} & no & 1.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1} & yes & 1.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1/secretRef/name} & yes & 1.00 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.70 \\
-selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & 1.00 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1} & yes & 0.40 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1/secretRef/name} & yes & 0.40 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.20 \\
+selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.60 \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & yes & 1.00 \\
+\bottomrule
+\end{tabular}
+
+% Table 3 — controls: healthy scenarios, baseline NoFaultFound rate (1 − FP rate).
+\begin{tabular}{lr}
+\toprule
+Scenario & NoFaultFound rate \\
+\midrule
+healthy-bundle & 0.60 \\
 \bottomrule
 \end{tabular}

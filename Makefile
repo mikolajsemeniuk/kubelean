@@ -1,15 +1,12 @@
-# kubelean m2 — produce raw JSONL shards per group. One step per group; run-all
-# lists them. Render is separate: go run ./cmd/render
-#
-#   make run-secret-ref
-#   make run-all
+.PHONY: run-selector run-references run-healthy run-all
 
-.PHONY: run-selector-mismatch run-secret-ref run-all
+run-selector:
+	go run ./cmd/heatmap -group selector
 
-run-selector-mismatch:
-	go run ./cmd/heatmap -group selector-mismatch
+run-references:
+	go run ./cmd/heatmap -group references
 
-run-secret-ref:
-	go run ./cmd/heatmap -group secret-ref
+run-healthy:
+	go run ./cmd/heatmap -group healthy
 
-run-all: run-selector-mismatch run-secret-ref
+run-all: run-selector run-references run-healthy

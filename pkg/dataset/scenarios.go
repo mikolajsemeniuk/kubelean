@@ -9,8 +9,9 @@ import (
 // (make run-<group>). Defined here so scenarios and callers share one source of
 // truth instead of magic strings.
 const (
-	GroupSelectorMismatch = "selector-mismatch"
-	GroupSecretRef        = "secret-ref"
+	GroupSelector   = "selector"
+	GroupReferences = "references"
+	GroupHealthy    = "healthy"
 )
 
 // Scenario is one faulty instance of the m1 dataset: the rendered manifest(s)
@@ -39,6 +40,8 @@ func All() []Scenario {
 	return []Scenario{
 		selectorLabelMismatch(),
 		secretWrongName(),
+		configMapRefWrongName(),
+		healthyBundle(),
 	}
 }
 
@@ -72,8 +75,8 @@ func selectorLabelMismatch() Scenario {
 
 	out := Scenario{
 		Name:       "selector-label-mismatch",
-		Group:      GroupSelectorMismatch,
-		FaultClass: "SelectorLabelMismatch",
+		Group:      GroupSelector,
+		FaultClass: FaultSelectorMismatch,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.selector.matchLabels.app"},
 			{Kind: "Deployment", Path: "spec.template.metadata.labels.app"},
@@ -116,8 +119,8 @@ func secretWrongName() Scenario {
 
 	out := Scenario{
 		Name:       "secret-ref-wrong-name",
-		Group:      GroupSecretRef,
-		FaultClass: "SecretRefNotFound",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].secretRef.name"},
 			{Kind: "Secret", Path: "metadata.name"},
@@ -126,6 +129,88 @@ func secretWrongName() Scenario {
 	}
 
 	return out
+}
+
+// configMapRefWrongName mirrors secretWrongName with the fault on the ConfigMap
+// side: the Deployment's envFrom configMapRef points at "api-config" but the
+// ConfigMap is named "api-configs" (the Secret here is the healthy distractor).
+// Same Ref_NotFound class, different deciding field — this is what gives
+// configMapRef.name a cross-scenario profile (noise in secret-ref-wrong-name,
+// deciding here).
+func configMapRefWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		ConfigMapRef:  "api-config",
+		SecretRef:     "api-secret",
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: "api-configs", Namespace: "production",
+		Data: map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+	})
+
+	sec := NewSecret(SecretParams{
+		Name:       "api-secret",
+		Namespace:  "production",
+		StringData: map[string]string{"API_KEY": "redacted-api-key", "DB_PASSWORD": "redacted-password"},
+	})
+
+	return Scenario{
+		Name:       "configmap-ref-wrong-name",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].configMapRef.name"},
+			{Kind: "ConfigMap", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, cm, sec),
+	}
+}
+
+// healthyBundle is a fully consistent Deployment+ConfigMap+Secret (refs resolve,
+// selector matches template labels). The control: expected NoFaultFound. It
+// measures the false-positive rate and confirms that in a healthy manifest no
+// field carries fault signal. No deciding fields.
+func healthyBundle() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		ConfigMapRef:  "api-config",
+		SecretRef:     "api-secret",
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: "api-config", Namespace: "production",
+		Data: map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+	})
+
+	sec := NewSecret(SecretParams{
+		Name:       "api-secret",
+		Namespace:  "production",
+		StringData: map[string]string{"API_KEY": "redacted-api-key", "DB_PASSWORD": "redacted-password"},
+	})
+
+	return Scenario{
+		Name:       "healthy-bundle",
+		Group:      GroupHealthy,
+		FaultClass: FaultNoFault,
+		YAML:       joinDocs(dep, cm, sec),
+	}
 }
 
 // mustRender executes a parsed template against data and returns the trimmed
