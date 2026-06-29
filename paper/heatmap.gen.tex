@@ -62,44 +62,6 @@ selector-label-mismatch & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/apiVersion} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/kind} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/metadata/name} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/metadata/namespace} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/metadata/labels} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/spec/type} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/spec/selector} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/spec/ports/*/port} & yes & 0.00 \\
-service-port-mismatch & Service & \texttt{/spec/ports/*/protocol} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/kind} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/metadata/name} & no & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/metadata/labels} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & yes & 0.00 \\
-service-selector-mismatch & Service & \texttt{/apiVersion} & yes & 0.00 \\
-service-selector-mismatch & Service & \texttt{/kind} & yes & 0.00 \\
-service-selector-mismatch & Service & \textbf{\texttt{/metadata/name}} & yes & 0.80 \\
-service-selector-mismatch & Service & \texttt{/metadata/namespace} & yes & 0.00 \\
-service-selector-mismatch & Service & \texttt{/metadata/labels} & yes & 0.00 \\
-service-selector-mismatch & Service & \texttt{/spec/type} & yes & 0.00 \\
-service-selector-mismatch & Service & \texttt{/spec/ports/*/port} & yes & 0.20 \\
-service-selector-mismatch & Service & \textbf{\texttt{/spec/ports/*/targetPort}} & yes & 1.00 \\
-service-selector-mismatch & Service & \texttt{/spec/ports/*/protocol} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/kind} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/metadata/name} & no & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/metadata/labels} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & yes & 0.00 \\
-service-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.00 \\
 \bottomrule
 \end{tabular}
 
@@ -116,10 +78,6 @@ secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/en
 secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.20 \\
 selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.60 \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & yes & 1.00 \\
-service-port-mismatch & Service & \texttt{/spec/ports/*/targetPort} & yes & 0.00 \\
-service-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 1.00 \\
-service-selector-mismatch & Service & \texttt{/spec/selector} & yes & 1.00 \\
-service-selector-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.00 \\
 \bottomrule
 \end{tabular}
 
@@ -129,5 +87,16 @@ service-selector-mismatch & Deployment & \texttt{/spec/template/metadata/labels}
 Scenario & NoFaultFound rate \\
 \midrule
 healthy-bundle & 0.60 \\
+\bottomrule
+\end{tabular}
+
+% Table 4 — below the #12 baseline gate (acc < 0.80): excluded from the
+% maps above; the model cannot reliably diagnose the full manifest.
+\begin{tabular}{llr}
+\toprule
+Scenario & Fault & Baseline acc \\
+\midrule
+service-port-mismatch & PortMismatch & 0.60 \\
+service-selector-mismatch & SelectorMismatch & 0.70 \\
 \bottomrule
 \end{tabular}

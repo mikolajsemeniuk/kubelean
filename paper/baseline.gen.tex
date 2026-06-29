@@ -190,7 +190,7 @@ spec:
   selector:
     app: checkout
   ports:
-    - port: 80
+    - port: 8080
       targetPort: 9090
       protocol: TCP
 ---
@@ -232,7 +232,7 @@ spec:
   selector:
     app: storefront
   ports:
-    - port: 80
+    - port: 8080
       targetPort: 8080
       protocol: TCP
 ---
