@@ -176,3 +176,87 @@ spec:
             - containerPort: 80
 \end{verbatim}
 
+% scenario: service-port-mismatch — fault: PortMismatch
+\begin{verbatim}
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+  namespace: production
+  labels:
+    app: checkout
+spec:
+  type: ClusterIP
+  selector:
+    app: checkout
+  ports:
+    - port: 80
+      targetPort: 9090
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: production
+  labels:
+    app: checkout
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      containers:
+        - name: checkout
+          image: ghcr.io/acme/checkout:1.4.0
+          ports:
+            - containerPort: 8080
+\end{verbatim}
+
+% scenario: service-selector-mismatch — fault: SelectorMismatch
+\begin{verbatim}
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: production
+  labels:
+    app: web
+spec:
+  type: ClusterIP
+  selector:
+    app: storefront
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: production
+  labels:
+    app: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.25
+          ports:
+            - containerPort: 8080
+\end{verbatim}
+

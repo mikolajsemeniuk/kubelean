@@ -175,29 +175,34 @@ func findFirst(n *yaml.Node, pat, prefix []string) ([]string, bool) {
 	if len(pat) == 0 {
 		return prefix, true
 	}
+
 	seg := pat[0]
 	switch {
 	case seg == "*":
 		if n.Kind != yaml.SequenceNode {
 			return nil, false
 		}
+
 		for i, el := range n.Content {
 			if r, ok := findFirst(el, pat[1:], append(append([]string{}, prefix...), strconv.Itoa(i))); ok {
 				return r, true
 			}
 		}
+
 		return nil, false
 	case n.Kind == yaml.SequenceNode:
 		idx, err := strconv.Atoi(seg)
 		if err != nil || idx < 0 || idx >= len(n.Content) {
 			return nil, false
 		}
+
 		return findFirst(n.Content[idx], pat[1:], append(append([]string{}, prefix...), seg))
 	case n.Kind == yaml.MappingNode:
 		v := mapValue(n, seg)
 		if v == nil {
 			return nil, false
 		}
+
 		return findFirst(v, pat[1:], append(append([]string{}, prefix...), seg))
 	default:
 		return nil, false
@@ -285,10 +290,12 @@ func collapse(root *yaml.Node, segs []string) {
 		if err != nil || !isEmptyContainer(node) {
 			break
 		}
+
 		grandparent, err := navigate(root, segs[:i-1])
 		if err != nil {
 			break
 		}
+
 		if err := removeChild(grandparent, segs[i-1]); err != nil {
 			break
 		}
@@ -307,12 +314,14 @@ func navigate(n *yaml.Node, segs []string) (*yaml.Node, error) {
 			if next == nil {
 				return nil, fmt.Errorf("key %q not found", seg)
 			}
+
 			n = next
 		case yaml.SequenceNode:
 			idx, err := strconv.Atoi(seg)
 			if err != nil || idx < 0 || idx >= len(n.Content) {
 				return nil, fmt.Errorf("bad index %q", seg)
 			}
+
 			n = n.Content[idx]
 		default:
 			return nil, fmt.Errorf("cannot descend into %q", seg)
@@ -330,13 +339,16 @@ func removeChild(parent *yaml.Node, seg string) error {
 				return nil
 			}
 		}
+
 		return fmt.Errorf("key %q not found", seg)
 	case yaml.SequenceNode:
 		idx, err := strconv.Atoi(seg)
 		if err != nil || idx < 0 || idx >= len(parent.Content) {
 			return fmt.Errorf("bad index %q", seg)
 		}
+
 		parent.Content = append(parent.Content[:idx], parent.Content[idx+1:]...)
+
 		return nil
 	default:
 		return errors.New("parent is not a container")
@@ -349,8 +361,7 @@ func encodeDocs(roots []*yaml.Node) (string, error) {
 	enc.SetIndent(2)
 	for _, r := range roots {
 		if err := enc.Encode(r); err != nil {
-			_ = enc.Close()
-			return "", err
+			return "", errors.Join(err, enc.Close())
 		}
 	}
 

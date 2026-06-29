@@ -65,20 +65,24 @@ func resolves(n *yaml.Node, segs []string) bool {
 		if n.Kind != yaml.SequenceNode || len(n.Content) == 0 {
 			return false
 		}
+
 		for _, el := range n.Content {
 			if !resolves(el, rest) {
 				return false
 			}
 		}
+
 		return true
 	}
 
 	if n.Kind != yaml.MappingNode {
 		return false
 	}
+
 	v := mapValue(n, seg)
 	if v == nil {
 		return false
 	}
+
 	return resolves(v, rest)
 }

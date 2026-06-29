@@ -32,6 +32,7 @@ func ResolveLeaves(src, kind, dottedPath string) ([]Locus, error) {
 		if kindOf(root) != kind {
 			continue
 		}
+
 		var ptrs []string
 		resolveLeaf(root, segs, "", &ptrs)
 		for _, p := range ptrs {
@@ -52,6 +53,7 @@ func splitDotted(p string) []string {
 			out = append(out, seg)
 		}
 	}
+
 	return out
 }
 
@@ -66,15 +68,18 @@ func resolveLeaf(node *yaml.Node, segs []string, prefix string, out *[]string) {
 		if node.Kind != yaml.SequenceNode {
 			return
 		}
+
 		for i, el := range node.Content {
 			resolveLeaf(el, rest, prefix+"/"+strconv.Itoa(i), out)
 		}
+
 		return
 	}
 
 	if node.Kind != yaml.MappingNode {
 		return
 	}
+
 	if v := mapValue(node, seg); v != nil {
 		resolveLeaf(v, rest, prefix+"/"+escape(seg), out)
 	}

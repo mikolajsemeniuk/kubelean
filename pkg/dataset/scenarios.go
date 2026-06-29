@@ -11,6 +11,7 @@ import (
 const (
 	GroupSelector   = "selector"
 	GroupReferences = "references"
+	GroupNetworking = "networking"
 	GroupHealthy    = "healthy"
 )
 
@@ -41,6 +42,8 @@ func All() []Scenario {
 		selectorLabelMismatch(),
 		secretWrongName(),
 		configMapRefWrongName(),
+		serviceSelectorMismatch(),
+		servicePortMismatch(),
 		healthyBundle(),
 	}
 }
@@ -172,6 +175,89 @@ func configMapRefWrongName() Scenario {
 			{Kind: "ConfigMap", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, cm, sec),
+	}
+}
+
+// serviceSelectorMismatch is a healthy Deployment plus a Service whose selector
+// (app=storefront) matches none of the Deployment's pods (app=web), so the
+// Service has no endpoints. The Deployment is internally consistent — the fault
+// is purely the Service selector against the pod labels, so both are deciding.
+// Same SelectorMismatch root cause as the Deployment case, on a different Kind.
+func serviceSelectorMismatch() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "web",
+		Namespace:     "production",
+		App:           "web",
+		Replicas:      3,
+		SelectorApp:   "web",
+		PodApp:        "web",
+		ContainerName: "web",
+		Image:         "nginx:1.25",
+		ContainerPort: 8080,
+	})
+
+	svc := NewService(ServiceParams{
+		Name:        "web",
+		Namespace:   "production",
+		App:         "web",
+		SelectorApp: "storefront", // no pod carries app=storefront
+		// port == targetPort == containerPort: ports are fully healthy, so the only
+		// anomaly is the selector. A 7B conflates port with targetPort, so an
+		// unequal port would read as a spurious PortMismatch and mask the selector.
+		Port:       8080,
+		TargetPort: 8080,
+	})
+
+	return Scenario{
+		Name:       "service-selector-mismatch",
+		Group:      GroupNetworking,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "Service", Path: "spec.selector.app"},
+			{Kind: "Deployment", Path: "spec.template.metadata.labels.app"},
+		},
+		YAML: joinDocs(svc, dep),
+	}
+}
+
+// servicePortMismatch is a healthy Deployment plus a Service whose selector
+// matches the pods (so it has endpoints) but whose targetPort (9090) does not
+// match the container's containerPort (8080) — traffic reaches a port nothing
+// listens on. Selector and labels are consistent; the fault is targetPort vs
+// containerPort, so both are deciding.
+func servicePortMismatch() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "checkout",
+		Namespace:     "production",
+		App:           "checkout",
+		Replicas:      2,
+		SelectorApp:   "checkout",
+		PodApp:        "checkout",
+		ContainerName: "checkout",
+		Image:         "ghcr.io/acme/checkout:1.4.0",
+		ContainerPort: 8080,
+	})
+
+	svc := NewService(ServiceParams{
+		Name:        "checkout",
+		Namespace:   "production",
+		App:         "checkout",
+		SelectorApp: "checkout",
+		// port == containerPort (8080), so the ONLY anomalous value is targetPort:
+		// removing it must restore a fully healthy manifest for the flip to hold.
+		Port:       8080,
+		TargetPort: 9090, // pods listen on 8080
+	})
+
+	return Scenario{
+		Name:       "service-port-mismatch",
+		Group:      GroupNetworking,
+		FaultClass: FaultPortMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "Service", Path: "spec.ports[].targetPort"},
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort"},
+		},
+		YAML: joinDocs(svc, dep),
 	}
 }
 

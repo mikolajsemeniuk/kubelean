@@ -11,6 +11,7 @@ package dataset
 const (
 	FaultSelectorMismatch = "SelectorMismatch"
 	FaultRefNotFound      = "Ref_NotFound"
+	FaultPortMismatch     = "PortMismatch"
 	FaultNoFault          = "NoFaultFound"
 )
 
@@ -25,7 +26,8 @@ type Fault struct {
 var faults = []Fault{
 	{FaultRefNotFound, "a name reference (secretRef.name, configMapRef.name, a key in valueFrom, a volume claimName, or serviceAccountName) points to an object or key that is not present in the manifests"},
 	{FaultSelectorMismatch, "the key/value pairs under spec.selector.matchLabels are not identical to those under spec.template.metadata.labels (compare each value, not just the keys), or a Service spec.selector does not equal the pod labels"},
-	{FaultNoFault, "every reference resolves and every selector matches its target labels — the manifests are healthy"},
+	{FaultPortMismatch, "a Service's spec.ports targetPort does not equal any containerPort exposed by the pods its selector matches, so connections to the Service reach a port where nothing is listening"},
+	{FaultNoFault, "every reference resolves, every selector matches its target labels, and every Service targetPort matches a pod containerPort — the manifests are healthy"},
 }
 
 // FaultClasses returns just the class names — used as the schema enum.

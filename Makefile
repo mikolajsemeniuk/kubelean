@@ -1,4 +1,4 @@
-.PHONY: run-selector run-references run-healthy run-all
+.PHONY: run-selector run-references run-networking run-healthy run-all clean-data
 
 run-selector:
 	go run ./cmd/heatmap -group selector
@@ -6,7 +6,13 @@ run-selector:
 run-references:
 	go run ./cmd/heatmap -group references
 
+run-networking:
+	go run ./cmd/heatmap -group networking
+
 run-healthy:
 	go run ./cmd/heatmap -group healthy
 
-run-all: run-selector run-references run-healthy
+run-all: run-selector run-references run-networking run-healthy
+
+clean-data:
+	rm -f data/*.jsonl
