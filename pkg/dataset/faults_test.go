@@ -6,6 +6,8 @@ import "testing"
 // missing from the faults catalog would never appear in the enum, so the model
 // could not output it and that scenario's baseline would silently be zero.
 func TestEveryScenarioClassIsInCatalog(t *testing.T) {
+	t.Parallel()
+
 	known := map[string]bool{}
 	for _, c := range FaultClasses() {
 		known[c] = true

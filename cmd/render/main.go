@@ -55,13 +55,18 @@ func main() {
 		log.Fatalf("no records in %s — produce shards first (make run-<group>)", *in)
 	}
 
-	// Resolve each scenario's deciding-field loci to concrete (doc, pointer).
+	// Resolve each scenario's deciding-field loci, then normalize their pointers to
+	// the same canonical field-key form the records carry (array indices -> *), so
+	// decides() compares like with like.
 	deciding := map[string][]heatmap.Locus{}
 	for _, s := range dataset.All() {
 		for _, df := range s.DecidingFields {
 			ls, err := heatmap.ResolveLeaves(s.YAML, df.Kind, df.Path)
 			if err != nil {
 				log.Fatalf("resolve %s %s: %v", s.Name, df.Path, err)
+			}
+			for i := range ls {
+				ls[i].Pointer = heatmap.NormalizeKey(ls[i].Pointer)
 			}
 			deciding[s.Name] = append(deciding[s.Name], ls...)
 		}

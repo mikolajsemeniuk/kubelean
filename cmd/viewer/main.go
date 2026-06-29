@@ -83,6 +83,9 @@ func aggregate(dir string) ([]string, []row, error) {
 	for _, s := range dataset.All() {
 		for _, df := range s.DecidingFields {
 			ls, _ := heatmap.ResolveLeaves(s.YAML, df.Kind, df.Path)
+			for i := range ls {
+				ls[i].Pointer = heatmap.NormalizeKey(ls[i].Pointer)
+			}
 			deciding[s.Name] = append(deciding[s.Name], ls...)
 		}
 	}
@@ -335,6 +338,9 @@ func confAggregate(dir string) (sals []salCell, ctls []ctlCell, fps []fpCell, er
 	for _, s := range dataset.All() {
 		for _, df := range s.DecidingFields {
 			ls, _ := heatmap.ResolveLeaves(s.YAML, df.Kind, df.Path)
+			for i := range ls {
+				ls[i].Pointer = heatmap.NormalizeKey(ls[i].Pointer)
+			}
 			deciding[s.Name] = append(deciding[s.Name], ls...)
 		}
 	}

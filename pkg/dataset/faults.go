@@ -43,5 +43,6 @@ func FaultLines() []string {
 	for i, f := range faults {
 		out[i] = f.Class + ": " + f.Description
 	}
+
 	return out
 }

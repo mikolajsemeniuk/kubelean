@@ -16,12 +16,10 @@ configmap-ref-wrong-name & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.2
 configmap-ref-wrong-name & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/name} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/image} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0/containerPort} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1/secretRef/name} & 0.00 & [-0.28, 0.28] & no \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
@@ -40,12 +38,10 @@ secret-ref-wrong-name & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.28, 
 secret-ref-wrong-name & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/name} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/image} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0/containerPort} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0} & 0.20 & [-0.11, 0.51] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name} & 0.20 & [-0.11, 0.51] & no \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.20 & [-0.11, 0.51] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
@@ -62,11 +58,9 @@ selector-label-mismatch & Deployment & \texttt{/metadata/name} & 0.20 & [-0.11, 
 selector-label-mismatch & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
-selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0} & 0.00 & [-0.28, 0.28] & no \\
-selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0/name} & 0.00 & [-0.28, 0.28] & no \\
-selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0/image} & 0.00 & [-0.28, 0.28] & no \\
-selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0/ports/0} & 0.00 & [-0.28, 0.28] & no \\
-selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0/ports/0/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
 \bottomrule
 \end{tabular}
 
@@ -76,13 +70,9 @@ selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/0/
 \toprule
 Scenario & Kind & Field & Recognized & 95\% CI \\
 \midrule
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0} & 1.00 & [0.72, 1.00] \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0} & 0.40 & [0.17, 0.69] \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name} & 0.40 & [0.17, 0.69] \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.40 & [0.17, 0.69] \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 0.20 & [0.06, 0.51] \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0} & 1.00 & [0.72, 1.00] \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1} & 0.40 & [0.17, 0.69] \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/1/secretRef/name} & 0.40 & [0.17, 0.69] \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.40 & [0.17, 0.69] \\
 secret-ref-wrong-name & Secret & \texttt{/metadata/name} & 0.20 & [0.06, 0.51] \\
 selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.60 & [0.31, 0.83] \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 1.00 & [0.72, 1.00] \\
