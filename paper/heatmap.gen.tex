@@ -2,8 +2,9 @@
 % \input-able fragment; requires \usepackage{booktabs}.
 % model: qwen2.5:7b-instruct @ 845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e ; k=10 ; temp=0.70 ; num_ctx=8192
 % Table 1 — saliency map (non-deciding fields). Saliency = baseline accuracy
-% − reduced accuracy, each a fraction over the cell's trials; bold = saliency > 0.
-% Valid is a covariate, not a gate: Valid=no is scored but flagged.
+% − reduced accuracy, each a fraction over the cell's trials. Bold = the 95%
+% Newcombe CI of the saliency excludes 0 (real signal, not k-noise); see
+% confidence.gen.tex for the intervals. Valid is a covariate, not a gate.
 \begin{tabular}{lllcr}
 \toprule
 Scenario & Kind & Field & Valid & Saliency \\
@@ -44,8 +45,8 @@ secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/na
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/image} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/ports/0/containerPort} & yes & 0.00 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/0/envFrom/0}} & yes & 0.20 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name}} & yes & 0.20 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0} & yes & 0.20 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/0/envFrom/0/configMapRef/name} & yes & 0.20 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & yes & 0.00 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/kind} & yes & 0.00 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.00 \\
@@ -58,7 +59,7 @@ secret-ref-wrong-name & Secret & \texttt{/type} & yes & 0.00 \\
 secret-ref-wrong-name & Secret & \texttt{/stringData} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/kind} & yes & 0.00 \\
-selector-label-mismatch & Deployment & \textbf{\texttt{/metadata/name}} & no & 0.20 \\
+selector-label-mismatch & Deployment & \texttt{/metadata/name} & no & 0.20 \\
 selector-label-mismatch & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/metadata/labels} & yes & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\

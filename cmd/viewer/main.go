@@ -17,6 +17,7 @@ import (
 	"html"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -53,6 +54,16 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		writePage(w, scenarios, rows)
+	})
+
+	http.HandleFunc("/confidence", func(w http.ResponseWriter, r *http.Request) {
+		sals, ctls, fps, err := confAggregate(*dir)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		writeConfidence(w, sals, ctls, fps)
 	})
 
 	log.Printf("kubelean viewer on http://localhost%s (reading %s)", *addr, *dir)
@@ -173,6 +184,7 @@ func writePage(w io.Writer, scenarios []string, rows []row) {
  .s{font-weight:bold}
 </style></head><body>`)
 
+	fmt.Fprint(w, nav)
 	fmt.Fprintf(w, "<h1>kubelean signal heatmap — %d fields × %d scenarios</h1>", len(rows), len(scenarios))
 	fmt.Fprintf(w, `<div class=legend>
  signal = baseline − reduced accuracy (how often removing the field changed the diagnosis):
@@ -264,4 +276,195 @@ func heat(s float64) string {
 		s = 1
 	}
 	return fmt.Sprintf("hsl(%d,75%%,72%%)", int(120*(1-s)))
+}
+
+const nav = `<nav style="margin:0 0 14px"><a href="/">signal heatmap</a> &nbsp;|&nbsp; <a href="/confidence">confidence (CI)</a></nav>`
+
+// zCI is the standard-normal quantile for a 95% two-sided interval; wilson and
+// newcombe mirror cmd/render so the browser preview matches the paper artifact.
+const zCI = 1.96
+
+func wilson(x, n int) (lo, hi float64) {
+	if n == 0 {
+		return 0, 0
+	}
+	p, nn := frac(x, n), float64(n)
+	d := 1 + zCI*zCI/nn
+	center := (p + zCI*zCI/(2*nn)) / d
+	half := (zCI / d) * math.Sqrt(p*(1-p)/nn+zCI*zCI/(4*nn*nn))
+	return math.Max(0, center-half), math.Min(1, center+half)
+}
+
+func newcombe(x1, n1, x2, n2 int) (diff, lo, hi float64) {
+	p1, p2 := frac(x1, n1), frac(x2, n2)
+	l1, u1 := wilson(x1, n1)
+	l2, u2 := wilson(x2, n2)
+	diff = p1 - p2
+	lo = diff - math.Sqrt((p1-l1)*(p1-l1)+(u2-p2)*(u2-p2))
+	hi = diff + math.Sqrt((u1-p1)*(u1-p1)+(p2-l2)*(p2-l2))
+	return diff, lo, hi
+}
+
+type salCell struct {
+	scenario, kind, field string
+	valid, signal         bool
+	sal, lo, hi           float64
+}
+
+type ctlCell struct {
+	scenario, kind, field string
+	valid                 bool
+	rec, lo, hi           float64
+}
+
+type fpCell struct {
+	scenario     string
+	rate, lo, hi float64
+}
+
+// confAggregate computes the three confidence populations exactly as cmd/render:
+// saliency (non-deciding, Newcombe), control recognition (deciding, Wilson) and
+// healthy false-positive rate (Wilson).
+func confAggregate(dir string) (sals []salCell, ctls []ctlCell, fps []fpCell, err error) {
+	recs, err := readShards(dir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	deciding := map[string][]heatmap.Locus{}
+	for _, s := range dataset.All() {
+		for _, df := range s.DecidingFields {
+			ls, _ := heatmap.ResolveLeaves(s.YAML, df.Kind, df.Path)
+			deciding[s.Name] = append(deciding[s.Name], ls...)
+		}
+	}
+
+	baseHit := map[string]int{}
+	baseTot := map[string]int{}
+	faultClass := map[string]string{}
+	type agg struct {
+		kind                            string
+		valid, deciding                 bool
+		total, matchFault, matchNoFault int
+	}
+	cells := map[string]*agg{}
+	var order []string
+
+	for _, r := range recs {
+		faultClass[r.Scenario] = r.FaultClass
+		correct := r.Answer != nil && *r.Answer == r.FaultClass
+		if r.Variant == "baseline" {
+			baseTot[r.Scenario]++
+			if correct {
+				baseHit[r.Scenario]++
+			}
+			continue
+		}
+		field, doc := "", -1
+		if r.Field != nil {
+			field = *r.Field
+		}
+		if r.Doc != nil {
+			doc = *r.Doc
+		}
+		key := fmt.Sprintf("%s\x00%d\x00%s", r.Scenario, doc, field)
+		a := cells[key]
+		if a == nil {
+			a = &agg{kind: r.Kind, valid: r.Valid, deciding: decides(doc, field, deciding[r.Scenario])}
+			cells[key] = a
+			order = append(order, key)
+		}
+		a.total++
+		if correct {
+			a.matchFault++
+		}
+		if r.Answer != nil && *r.Answer == dataset.FaultNoFault {
+			a.matchNoFault++
+		}
+	}
+
+	for _, key := range order {
+		a := cells[key]
+		parts := strings.SplitN(key, "\x00", 3)
+		scenario, field := parts[0], parts[2]
+		switch {
+		case a.deciding:
+			lo, hi := wilson(a.matchNoFault, a.total)
+			ctls = append(ctls, ctlCell{scenario, a.kind, field, a.valid, frac(a.matchNoFault, a.total), lo, hi})
+		case faultClass[scenario] != dataset.FaultNoFault:
+			sal, lo, hi := newcombe(baseHit[scenario], baseTot[scenario], a.matchFault, a.total)
+			sals = append(sals, salCell{scenario, a.kind, field, a.valid, lo > 0, sal, lo, hi})
+		}
+		// healthy non-deciding cells are excluded from the map (mirrors render).
+	}
+
+	var controls []string
+	for s, fc := range faultClass {
+		if fc == dataset.FaultNoFault {
+			controls = append(controls, s)
+		}
+	}
+	sort.Strings(controls)
+	for _, s := range controls {
+		lo, hi := wilson(baseHit[s], baseTot[s])
+		fps = append(fps, fpCell{s, frac(baseHit[s], baseTot[s]), lo, hi})
+	}
+
+	sort.Slice(sals, func(i, j int) bool { return less(sals[i].scenario, sals[i].field, sals[j].scenario, sals[j].field) })
+	sort.Slice(ctls, func(i, j int) bool { return less(ctls[i].scenario, ctls[i].field, ctls[j].scenario, ctls[j].field) })
+	return sals, ctls, fps, nil
+}
+
+func less(s1, f1, s2, f2 string) bool {
+	if s1 != s2 {
+		return s1 < s2
+	}
+	return f1 < f2
+}
+
+func writeConfidence(w io.Writer, sals []salCell, ctls []ctlCell, fps []fpCell) {
+	fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8">
+<title>kubelean confidence</title>
+<style>
+ body{font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;margin:24px;color:#222}
+ h1{font-size:16px} h2{font-size:14px;margin-top:24px}
+ .legend{margin:8px 0 16px;color:#444}
+ table{border-collapse:collapse;margin-top:6px}
+ th,td{border:1px solid #ddd;padding:4px 8px;text-align:center}
+ th.f,td.f{text-align:left;white-space:nowrap;font-size:12px}
+ td.sig{font-weight:bold}
+ .yes{background:hsl(0,75%,82%)} .no{background:hsl(120,55%,90%)}
+</style></head><body>`)
+	fmt.Fprint(w, nav)
+	fmt.Fprint(w, `<h1>kubelean — 95% confidence intervals</h1>
+<div class=legend>Saliency CI = Newcombe (difference of two proportions); control rates = Wilson (single proportion).
+ <b>Signal</b> = saliency CI lower bound &gt; 0 (real, not k-noise).</div>`)
+
+	fmt.Fprintf(w, "<h2>Saliency map — non-deciding fields (%d)</h2>", len(sals))
+	fmt.Fprint(w, "<table><tr><th class=f>Scenario</th><th class=f>Kind</th><th class=f>Field</th><th>Saliency</th><th>95% CI</th><th>Signal</th></tr>")
+	for _, c := range sals {
+		cls, sig, field := "no", "no", html.EscapeString(c.field)
+		if c.signal {
+			cls, sig, field = "yes", "yes", "<b>"+field+"</b>"
+		}
+		fmt.Fprintf(w, `<tr><td class=f>%s</td><td class=f>%s</td><td class=f>%s</td><td>%.2f</td><td>[%.2f, %.2f]</td><td class="sig %s">%s</td></tr>`,
+			html.EscapeString(c.scenario), html.EscapeString(c.kind), field, c.sal, c.lo, c.hi, cls, sig)
+	}
+	fmt.Fprint(w, "</table>")
+
+	fmt.Fprintf(w, "<h2>Control — deciding loci, Recognized (%d)</h2>", len(ctls))
+	fmt.Fprint(w, "<table><tr><th class=f>Scenario</th><th class=f>Kind</th><th class=f>Field</th><th>Recognized</th><th>95% CI</th></tr>")
+	for _, c := range ctls {
+		fmt.Fprintf(w, `<tr><td class=f>%s</td><td class=f>%s</td><td class=f>%s</td><td>%.2f</td><td>[%.2f, %.2f]</td></tr>`,
+			html.EscapeString(c.scenario), html.EscapeString(c.kind), html.EscapeString(c.field), c.rec, c.lo, c.hi)
+	}
+	fmt.Fprint(w, "</table>")
+
+	fmt.Fprintf(w, "<h2>Control — healthy NoFaultFound rate (%d)</h2>", len(fps))
+	fmt.Fprint(w, "<table><tr><th class=f>Scenario</th><th>NoFaultFound rate</th><th>95% CI</th></tr>")
+	for _, c := range fps {
+		fmt.Fprintf(w, `<tr><td class=f>%s</td><td>%.2f</td><td>[%.2f, %.2f]</td></tr>`,
+			html.EscapeString(c.scenario), c.rate, c.lo, c.hi)
+	}
+	fmt.Fprint(w, "</table></body></html>")
 }
