@@ -19,11 +19,16 @@ type DeploymentParams struct {
 	Replicas      int
 	SelectorApp   string // spec.selector.matchLabels.app
 	PodApp        string // spec.template.metadata.labels.app
-	ContainerName string
-	Image         string
-	ContainerPort int
-	ConfigMapRef  string // optional: envFrom configMapRef name ("" omits it)
-	SecretRef     string // optional: envFrom secretRef name ("" omits it)
+	ContainerName      string
+	Image              string
+	ContainerPort      int
+	PriorityClassName  string // optional: pod priorityClassName ("" omits it)
+	ServiceAccountName string // optional: pod serviceAccountName ("" omits it)
+	ImagePullSecret    string // optional: imagePullSecrets[].name ("" omits it)
+	ConfigMapRef       string // optional: envFrom configMapRef name ("" omits it)
+	SecretRef          string // optional: envFrom secretRef name ("" omits it)
+	VolumeKind         string // optional: volume source — "pvc" | "configMap" | "secret"
+	VolumeRef          string // optional: the referenced name ("" omits the volume)
 }
 
 //go:embed templates/deploy.yaml

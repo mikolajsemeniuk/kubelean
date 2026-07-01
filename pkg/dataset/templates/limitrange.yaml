@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .App }}
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: {{ .DefaultCPU }}
+        memory: {{ .DefaultMemory }}
+      defaultRequest:
+        cpu: {{ .RequestCPU }}
+        memory: {{ .RequestMemory }}

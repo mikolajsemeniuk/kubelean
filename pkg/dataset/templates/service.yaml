@@ -6,10 +6,16 @@ metadata:
   labels:
     app: {{ .App }}
 spec:
-  type: ClusterIP
+  type: {{ .Type }}
+  {{- if .Headless }}
+  clusterIP: None
+  {{- end }}
   selector:
     app: {{ .SelectorApp }}
   ports:
     - port: {{ .Port }}
       targetPort: {{ .TargetPort }}
+      {{- if .NodePort }}
+      nodePort: {{ .NodePort }}
+      {{- end }}
       protocol: TCP

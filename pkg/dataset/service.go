@@ -16,9 +16,12 @@ type ServiceParams struct {
 	Name        string
 	Namespace   string
 	App         string // metadata.labels.app
+	Type        string // spec.type — "" defaults to ClusterIP; else NodePort/LoadBalancer
+	Headless    bool   // spec.clusterIP: None (headless, e.g. for a StatefulSet)
 	SelectorApp string // spec.selector.app
 	Port        int    // spec.ports[].port
 	TargetPort  int    // spec.ports[].targetPort
+	NodePort    int    // spec.ports[].nodePort (0 omits it; only valid for NodePort)
 }
 
 //go:embed templates/service.yaml
@@ -26,7 +29,11 @@ var serviceYAML string
 
 var serviceTemplate = template.Must(template.New("service").Parse(serviceYAML))
 
-// NewService renders a Service manifest from the given params.
+// NewService renders a Service manifest from the given params. Type defaults to
+// ClusterIP so existing callers render unchanged.
 func NewService(p ServiceParams) string {
+	if p.Type == "" {
+		p.Type = "ClusterIP"
+	}
 	return mustRender(serviceTemplate, p)
 }

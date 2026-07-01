@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .App }}
+spec:
+  hard:
+    requests.cpu: "{{ .CPU }}"
+    requests.memory: {{ .Memory }}
+    pods: "{{ .Pods }}"

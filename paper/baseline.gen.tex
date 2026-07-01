@@ -50,6 +50,72 @@ stringData:
   DB_PASSWORD: redacted-password
 \end{verbatim}
 
+% scenario: configmap-volume-wrong-name — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: production
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          configMap:
+            name: api-files
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-file
+  namespace: production
+data:
+  app.conf: level=info
+\end{verbatim}
+
+% scenario: daemonset-selector-mismatch — fault: SelectorMismatch
+\begin{verbatim}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: agent
+  namespace: production
+  labels:
+    app: agent
+spec:
+  selector:
+    matchLabels:
+      app: agent
+  template:
+    metadata:
+      labels:
+        app: log-agent
+    spec:
+      containers:
+        - name: agent
+          image: fluent/fluent-bit:3.0.7
+          ports:
+            - containerPort: 2020
+\end{verbatim}
+
 % scenario: healthy-bundle — fault: NoFaultFound
 \begin{verbatim}
 apiVersion: apps/v1
@@ -100,6 +166,90 @@ stringData:
   DB_PASSWORD: redacted-password
 \end{verbatim}
 
+% scenario: imagepull-secret-wrong-name — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: production
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      imagePullSecrets:
+        - name: registry-creds
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-cred
+  namespace: production
+type: Opaque
+stringData:
+  .dockerconfigjson: redacted-docker-config
+\end{verbatim}
+
+% scenario: pvc-claim-wrong-name — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: production
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: api-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-datas
+  namespace: production
+  labels:
+    app: api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+\end{verbatim}
+
 % scenario: secret-ref-wrong-name — fault: Ref_NotFound
 \begin{verbatim}
 apiVersion: apps/v1
@@ -148,6 +298,49 @@ type: Opaque
 stringData:
   API_KEY: redacted-api-key
   DB_PASSWORD: redacted-password
+\end{verbatim}
+
+% scenario: secret-volume-wrong-name — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: production
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          secret:
+            secretName: api-certs
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-cert
+  namespace: production
+type: Opaque
+stringData:
+  tls.crt: redacted-cert
+  tls.key: redacted-key
 \end{verbatim}
 
 % scenario: selector-label-mismatch — fault: SelectorMismatch
@@ -258,5 +451,68 @@ spec:
           image: nginx:1.25
           ports:
             - containerPort: 8080
+\end{verbatim}
+
+% scenario: serviceaccount-wrong-name — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: production
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      serviceAccountName: api-runner
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: api-runners
+  namespace: production
+  labels:
+    app: api
+automountServiceAccountToken: true
+\end{verbatim}
+
+% scenario: statefulset-selector-mismatch — fault: SelectorMismatch
+\begin{verbatim}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+  namespace: production
+  labels:
+    app: db
+spec:
+  serviceName: db
+  replicas: 3
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+        - name: db
+          image: postgres:16.2
+          ports:
+            - containerPort: 5432
 \end{verbatim}
 

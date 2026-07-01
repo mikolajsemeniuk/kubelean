@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .App }}
+spec:
+  schedule: "{{ .Schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ .PodApp }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: {{ .ContainerName }}
+              image: {{ .Image }}

@@ -12,6 +12,7 @@ const (
 	GroupSelector   = "selector"
 	GroupReferences = "references"
 	GroupNetworking = "networking"
+	GroupVolumes    = "volumes"
 	GroupHealthy    = "healthy"
 )
 
@@ -40,8 +41,15 @@ type DecidingField struct {
 func All() []Scenario {
 	return []Scenario{
 		selectorLabelMismatch(),
+		statefulSetSelectorMismatch(),
+		daemonSetSelectorMismatch(),
 		secretWrongName(),
 		configMapRefWrongName(),
+		serviceAccountWrongName(),
+		imagePullSecretWrongName(),
+		pvcClaimWrongName(),
+		configMapVolumeWrongName(),
+		secretVolumeWrongName(),
 		serviceSelectorMismatch(),
 		servicePortMismatch(),
 		healthyBundle(),
@@ -88,6 +96,200 @@ func selectorLabelMismatch() Scenario {
 	}
 
 	return out
+}
+
+// statefulSetSelectorMismatch is a single StatefulSet whose pod template labels
+// (app=database) do not match its own selector (app=db) — the same SelectorMismatch
+// root cause as the Deployment case, on a second workload Kind, within one
+// document (so the 7B handles it, unlike the cross-document Service case).
+func statefulSetSelectorMismatch() Scenario {
+	sts := NewStatefulSet(StatefulSetParams{
+		Name:          "db",
+		Namespace:     "production",
+		App:           "db",
+		Replicas:      3,
+		SelectorApp:   "db",
+		PodApp:        "database",
+		ContainerName: "db",
+		Image:         "postgres:16.2",
+		ContainerPort: 5432,
+	})
+
+	return Scenario{
+		Name:       "statefulset-selector-mismatch",
+		Group:      GroupSelector,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "StatefulSet", Path: "spec.selector.matchLabels.app"},
+			{Kind: "StatefulSet", Path: "spec.template.metadata.labels.app"},
+		},
+		YAML: joinDocs(sts),
+	}
+}
+
+// daemonSetSelectorMismatch is a DaemonSet whose pod template labels (app=log-agent)
+// do not match its selector (app=agent) — SelectorMismatch on a third workload Kind,
+// single-document, so the 7B handles it.
+func daemonSetSelectorMismatch() Scenario {
+	ds := NewDaemonSet(DaemonSetParams{
+		Name:          "agent",
+		Namespace:     "production",
+		App:           "agent",
+		SelectorApp:   "agent",
+		PodApp:        "log-agent",
+		ContainerName: "agent",
+		Image:         "fluent/fluent-bit:3.0.7",
+		ContainerPort: 2020,
+	})
+
+	return Scenario{
+		Name:       "daemonset-selector-mismatch",
+		Group:      GroupSelector,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "DaemonSet", Path: "spec.selector.matchLabels.app"},
+			{Kind: "DaemonSet", Path: "spec.template.metadata.labels.app"},
+		},
+		YAML: joinDocs(ds),
+	}
+}
+
+// pvcClaimWrongName is a Deployment mounting a volume backed by PVC "api-data",
+// but the only PersistentVolumeClaim is named "api-datas" — a dangling claim
+// (Pending pod in a real cluster). Ref_NotFound.
+func pvcClaimWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		VolumeKind:    "pvc",
+		VolumeRef:     "api-data",
+	})
+
+	pvc := NewPVC(PVCParams{Name: "api-datas", Namespace: "production", App: "api", Storage: "10Gi"})
+
+	return Scenario{
+		Name:       "pvc-claim-wrong-name",
+		Group:      GroupVolumes,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.volumes[].persistentVolumeClaim.claimName"},
+			{Kind: "PersistentVolumeClaim", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, pvc),
+	}
+}
+
+// configMapVolumeWrongName is a Deployment mounting ConfigMap "api-files" as a
+// volume, but the ConfigMap is named "api-file" — same Ref_NotFound, a different
+// reference site (volume source, not envFrom) so configMap.name and configMapRef
+// .name are distinct field-keys with their own cross-scenario profiles.
+func configMapVolumeWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		VolumeKind:    "configMap",
+		VolumeRef:     "api-files",
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: "api-file", Namespace: "production",
+		Data: map[string]string{"app.conf": "level=info"},
+	})
+
+	return Scenario{
+		Name:       "configmap-volume-wrong-name",
+		Group:      GroupVolumes,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.volumes[].configMap.name"},
+			{Kind: "ConfigMap", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, cm),
+	}
+}
+
+// secretVolumeWrongName is a Deployment mounting Secret "api-certs" as a volume,
+// but the Secret is named "api-cert" — Ref_NotFound at the secret volume source.
+func secretVolumeWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		VolumeKind:    "secret",
+		VolumeRef:     "api-certs",
+	})
+
+	sec := NewSecret(SecretParams{
+		Name: "api-cert", Namespace: "production",
+		StringData: map[string]string{"tls.crt": "redacted-cert", "tls.key": "redacted-key"},
+	})
+
+	return Scenario{
+		Name:       "secret-volume-wrong-name",
+		Group:      GroupVolumes,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.volumes[].secret.secretName"},
+			{Kind: "Secret", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, sec),
+	}
+}
+
+// imagePullSecretWrongName is a Deployment whose pods reference image pull secret
+// "registry-creds", but the only Secret in the bundle is named "registry-cred" —
+// a dangling reference (ImagePullBackOff in a real cluster). Ref_NotFound, a fourth
+// reference kind on the cross-scenario profile.
+func imagePullSecretWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:            "api",
+		Namespace:       "production",
+		App:             "api",
+		Replicas:        2,
+		SelectorApp:     "api",
+		PodApp:          "api",
+		ContainerName:   "api",
+		Image:           "ghcr.io/acme/api:2.3.1",
+		ContainerPort:   8080,
+		ImagePullSecret: "registry-creds",
+	})
+
+	sec := NewSecret(SecretParams{
+		Name:       "registry-cred",
+		Namespace:  "production",
+		StringData: map[string]string{".dockerconfigjson": "redacted-docker-config"},
+	})
+
+	return Scenario{
+		Name:       "imagepull-secret-wrong-name",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.imagePullSecrets[].name"},
+			{Kind: "Secret", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, sec),
+	}
 }
 
 // secretWrongName is a Deployment wired to a ConfigMap (correct — a healthy
@@ -258,6 +460,41 @@ func servicePortMismatch() Scenario {
 			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort"},
 		},
 		YAML: joinDocs(svc, dep),
+	}
+}
+
+// serviceAccountWrongName is a Deployment whose pods run as serviceAccount
+// "api-runner", but the only ServiceAccount in the bundle is named "api-runners"
+// — a dangling reference. Same Ref_NotFound class as the secret/configmap cases,
+// a third reference kind, so serviceAccountName joins the cross-scenario profile
+// (deciding here, noise wherever a serviceAccount is not the fault).
+func serviceAccountWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name:               "api",
+		Namespace:          "production",
+		App:                "api",
+		Replicas:           2,
+		SelectorApp:        "api",
+		PodApp:             "api",
+		ContainerName:      "api",
+		Image:              "ghcr.io/acme/api:2.3.1",
+		ContainerPort:      8080,
+		ServiceAccountName: "api-runner",
+	})
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "api-runners", Namespace: "production", App: "api",
+	})
+
+	return Scenario{
+		Name:       "serviceaccount-wrong-name",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.serviceAccountName"},
+			{Kind: "ServiceAccount", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, sa),
 	}
 }
 

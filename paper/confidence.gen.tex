@@ -21,7 +21,7 @@ configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/kind} & 0.20 & [-0.11, 0.51] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/data} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & Secret & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
@@ -30,6 +30,50 @@ configmap-ref-wrong-name & Secret & \texttt{/metadata/name} & 0.00 & [-0.28, 0.2
 configmap-ref-wrong-name & Secret & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & Secret & \texttt{/type} & 0.00 & [-0.28, 0.28] & no \\
 configmap-ref-wrong-name & Secret & \texttt{/stringData} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \textbf{\texttt{/metadata/name}} & 0.60 & [0.20, 0.83] & yes \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+daemonset-selector-mismatch & DaemonSet & \textbf{\texttt{/spec/template/spec/containers/*/ports/*/containerPort}} & 0.80 & [0.38, 0.94] & yes \\
+imagepull-secret-wrong-name & Deployment & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Secret & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Secret & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Secret & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Secret & \texttt{/type} & 0.00 & [-0.28, 0.28] & no \\
+imagepull-secret-wrong-name & Secret & \texttt{/stringData} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/name} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/mountPath} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/name} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/spec/accessModes/*} & 0.00 & [-0.28, 0.28] & no \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/spec/resources/requests/storage} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
@@ -41,17 +85,36 @@ secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.20 & [-0.11, 0.51] & no \\
+secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name}} & 0.50 & [0.12, 0.76] & yes \\
 secret-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & ConfigMap & \texttt{/data} & 0.00 & [-0.28, 0.28] & no \\
-secret-ref-wrong-name & Secret & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+secret-ref-wrong-name & Secret & \texttt{/apiVersion} & 0.20 & [-0.11, 0.51] & no \\
 secret-ref-wrong-name & Secret & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Secret & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Secret & \texttt{/type} & 0.00 & [-0.28, 0.28] & no \\
 secret-ref-wrong-name & Secret & \texttt{/stringData} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/name} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/mountPath} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/name} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Secret & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Secret & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Secret & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Secret & \texttt{/type} & 0.00 & [-0.28, 0.28] & no \\
+secret-volume-wrong-name & Secret & \texttt{/stringData} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/metadata/name} & 0.20 & [-0.11, 0.51] & no \\
@@ -61,6 +124,32 @@ selector-label-mismatch & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 
 selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/apiVersion} & 0.20 & [-0.11, 0.51] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/kind} & 0.10 & [-0.19, 0.40] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/name} & 0.10 & [-0.19, 0.40] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/namespace} & 0.10 & [-0.19, 0.40] & no \\
+serviceaccount-wrong-name & Deployment & \textbf{\texttt{/metadata/labels}} & 0.40 & [0.04, 0.69] & yes \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.20 & [-0.11, 0.51] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/kind} & 0.20 & [-0.11, 0.51] & no \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/namespace} & 0.10 & [-0.19, 0.40] & no \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/automountServiceAccountToken} & 0.20 & [-0.11, 0.51] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/apiVersion} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/kind} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/name} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/namespace} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/labels} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/serviceName} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/replicas} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.28, 0.28] & no \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.28, 0.28] & no \\
 \bottomrule
 \end{tabular}
 
@@ -71,11 +160,23 @@ selector-label-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/
 Scenario & Kind & Field & Recognized & 95\% CI \\
 \midrule
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.40 & [0.17, 0.69] \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 0.20 & [0.06, 0.51] \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.40 & [0.17, 0.69] \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/name} & 0.20 & [0.06, 0.51] \\
-selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.60 & [0.31, 0.83] \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 0.60 & [0.31, 0.83] \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/spec/selector/matchLabels} & 0.80 & [0.49, 0.94] \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/spec/template/metadata/labels} & 1.00 & [0.72, 1.00] \\
+imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/spec/imagePullSecrets/*/name} & 0.80 & [0.49, 0.94] \\
+imagepull-secret-wrong-name & Secret & \texttt{/metadata/name} & 0.00 & [0.00, 0.28] \\
+pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/persistentVolumeClaim/claimName} & 1.00 & [0.72, 1.00] \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/metadata/name} & 1.00 & [0.72, 1.00] \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.70 & [0.40, 0.89] \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/name} & 0.60 & [0.31, 0.83] \\
+secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/secret/secretName} & 0.00 & [0.00, 0.28] \\
+secret-volume-wrong-name & Secret & \texttt{/metadata/name} & 0.00 & [0.00, 0.28] \\
+selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.80 & [0.49, 0.94] \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 1.00 & [0.72, 1.00] \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/serviceAccountName} & 1.00 & [0.72, 1.00] \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/name} & 1.00 & [0.72, 1.00] \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/selector/matchLabels} & 0.00 & [0.00, 0.28] \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/metadata/labels} & 1.00 & [0.72, 1.00] \\
 \bottomrule
 \end{tabular}
 

@@ -15,11 +15,26 @@ spec:
       labels:
         app: {{ .PodApp }}
     spec:
+      {{- if .PriorityClassName }}
+      priorityClassName: {{ .PriorityClassName }}
+      {{- end }}
+      {{- if .ServiceAccountName }}
+      serviceAccountName: {{ .ServiceAccountName }}
+      {{- end }}
+      {{- if .ImagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .ImagePullSecret }}
+      {{- end }}
       containers:
         - name: {{ .ContainerName }}
           image: {{ .Image }}
           ports:
             - containerPort: {{ .ContainerPort }}
+          {{- if .VolumeRef }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
           {{- if or .ConfigMapRef .SecretRef }}
           envFrom:
             {{- if .ConfigMapRef }}
@@ -31,3 +46,17 @@ spec:
                 name: {{ .SecretRef }}
             {{- end }}
           {{- end }}
+      {{- if .VolumeRef }}
+      volumes:
+        - name: data
+          {{- if eq .VolumeKind "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ .VolumeRef }}
+          {{- else if eq .VolumeKind "configMap" }}
+          configMap:
+            name: {{ .VolumeRef }}
+          {{- else }}
+          secret:
+            secretName: {{ .VolumeRef }}
+          {{- end }}
+      {{- end }}

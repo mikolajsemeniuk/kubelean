@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .App }}
+spec:
+  containers:
+    - name: {{ .ContainerName }}
+      image: {{ .Image }}
+      ports:
+        - containerPort: {{ .ContainerPort }}

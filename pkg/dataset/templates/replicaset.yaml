@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .App }}
+spec:
+  replicas: {{ .Replicas }}
+  selector:
+    matchLabels:
+      app: {{ .SelectorApp }}
+  template:
+    metadata:
+      labels:
+        app: {{ .PodApp }}
+    spec:
+      containers:
+        - name: {{ .ContainerName }}
+          image: {{ .Image }}
+          ports:
+            - containerPort: {{ .ContainerPort }}

@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .App }}
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app: {{ .PodApp }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: {{ .ContainerName }}
+          image: {{ .Image }}
