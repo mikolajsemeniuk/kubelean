@@ -197,8 +197,14 @@ healthy-bundle & 0.60 \\
 \toprule
 Scenario & Fault & Baseline acc \\
 \midrule
+clusterrolebinding-role-wrong-name & Ref\_NotFound & 0.00 \\
 configmap-volume-wrong-name & Ref\_NotFound & 0.60 \\
+hpa-target-wrong-name & Ref\_NotFound & 0.00 \\
+priorityclass-wrong-name & Ref\_NotFound & 0.00 \\
+rolebinding-role-wrong-name & Ref\_NotFound & 0.00 \\
 service-port-mismatch & PortMismatch & 0.60 \\
 service-selector-mismatch & SelectorMismatch & 0.70 \\
+storageclass-wrong-name & Ref\_NotFound & 0.00 \\
+vpa-target-wrong-name & Ref\_NotFound & 0.00 \\
 \bottomrule
 \end{tabular}
