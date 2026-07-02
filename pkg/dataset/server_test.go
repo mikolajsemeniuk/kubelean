@@ -96,6 +96,31 @@ func TestStatuses(t *testing.T) {
 	}
 }
 
+// TestDecidingRoles: every faulty scenario must have at least one
+// fault-deleting locus (or the flip has no honest control at all), and a
+// target object's metadata.name is always evidence-hiding — removing it leaves
+// the reference dangling.
+func TestDecidingRoles(t *testing.T) {
+	for _, s := range All() {
+		if s.FaultClass == FaultNoFault {
+			continue
+		}
+
+		deleting := 0
+		for _, df := range s.DecidingFields {
+			if !df.Hides {
+				deleting++
+			}
+			if df.Path == "metadata.name" && !df.Hides {
+				t.Errorf("%s: %s metadata.name must be evidence-hiding", s.Name, df.Kind)
+			}
+		}
+		if deleting == 0 {
+			t.Errorf("%s: no fault-deleting locus", s.Name)
+		}
+	}
+}
+
 // TestTwins: every faulty scenario has exactly one healthy twin — same bundle,
 // anomaly fixed, expected NoFaultFound, no deciding fields, no failure symptom
 // left in any status.

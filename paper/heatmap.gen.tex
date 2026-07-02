@@ -155,31 +155,46 @@ statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/contai
 \bottomrule
 \end{tabular}
 
-% Table 2 — control: deciding-field loci. Removing these deletes the fault, so
-% expected flips to NoFaultFound; Recognized = fraction that returned it (the rest
-% hallucinated the now-absent fault). Not saliency — these are not in the map.
+% Table 2a — control: fault-deleting loci. Removing these deletes the fault
+% itself (the dangling reference site, or one side of a same-document
+% comparison), so expected flips to NoFaultFound; Recognized = fraction that
+% returned it (the rest hallucinated the now-absent fault). Not saliency —
+% these are not in the map.
 \begin{tabular}{lllcr}
 \toprule
 Scenario & Kind & Field & Valid & Recognized \\
 \midrule
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & yes & 0.40 \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.60 \\
 daemonset-selector-mismatch & DaemonSet & \texttt{/spec/selector/matchLabels} & yes & 0.80 \\
 daemonset-selector-mismatch & DaemonSet & \texttt{/spec/template/metadata/labels} & yes & 1.00 \\
 imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/spec/imagePullSecrets/*/name} & yes & 0.80 \\
-imagepull-secret-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 \\
 pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/persistentVolumeClaim/claimName} & yes & 1.00 \\
-pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/metadata/name} & yes & 1.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.70 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.60 \\
 secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/secret/secretName} & yes & 0.00 \\
-secret-volume-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 \\
 selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.80 \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & yes & 1.00 \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/serviceAccountName} & yes & 1.00 \\
-serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/name} & yes & 1.00 \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/selector/matchLabels} & yes & 0.00 \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/metadata/labels} & yes & 1.00 \\
+\bottomrule
+\end{tabular}
+
+% Table 2b — control: evidence-hiding loci. Removing these (the target
+% object's name, the far side of a cross-document comparison) only hides the
+% fault's counter-evidence — the reference still dangles. There is no single
+% correct answer: NoFaultFound is right under the prompt's charitable
+% absent-field convention, the original fault under a strict reading. Both
+% rates are reported; do not pool this population with Table 2a.
+\begin{tabular}{lllcrr}
+\toprule
+Scenario & Kind & Field & Valid & NoFault rate & Fault rate \\
+\midrule
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.60 & 0.40 \\
+imagepull-secret-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 & 1.00 \\
+pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/metadata/name} & yes & 1.00 & 0.00 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.60 & 0.40 \\
+secret-volume-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 & 1.00 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/name} & yes & 1.00 & 0.00 \\
 \bottomrule
 \end{tabular}
 

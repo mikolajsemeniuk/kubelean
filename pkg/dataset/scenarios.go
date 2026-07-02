@@ -35,9 +35,26 @@ type Scenario struct {
 // with [] for array levels, e.g.
 // spec.template.spec.containers[].envFrom[].secretRef.name. It is resolved to
 // concrete pointers against a scenario's YAML by heatmap.ResolveLeaves.
+//
+// Hides splits the loci into the two populations of the control (the flip):
+//
+//   - Hides == false (fault-deleting): removing the field deletes the fault
+//     itself. The dangling reference site (secretRef.name) is gone, or one side
+//     of a same-document comparison (selector vs template labels) no longer
+//     exists — the manifests are genuinely consistent again, so expecting
+//     NoFaultFound is honest.
+//   - Hides == true (evidence-hiding): removing the field only removes the
+//     counter-evidence while the fault arguably persists. Removing the target
+//     Secret's metadata.name leaves the deployment still asking for a secret
+//     that no named object provides; removing pod labels leaves a Service
+//     selector that still matches nothing. NoFaultFound is only "correct" under
+//     the prompt's charitable absent-field convention; under a strict reading
+//     the original fault class is. The two readings are reported side by side
+//     and must never be pooled with the fault-deleting population.
 type DecidingField struct {
-	Kind string
-	Path string
+	Kind  string
+	Path  string
+	Hides bool
 }
 
 // All returns the whole m1 catalog: every faulty scenario, its healthy twin,
@@ -86,6 +103,7 @@ func maybeTwin(twin bool, s Scenario) Scenario {
 	if !twin {
 		return s
 	}
+
 	s.TwinOf = s.Name
 	s.Name += "-twin"
 	s.FaultClass = FaultNoFault
@@ -258,7 +276,7 @@ func pvcClaimWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.volumes[].persistentVolumeClaim.claimName"},
-			{Kind: "PersistentVolumeClaim", Path: "metadata.name"},
+			{Kind: "PersistentVolumeClaim", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, pvc),
 	})
@@ -302,7 +320,7 @@ func configMapVolumeWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.volumes[].configMap.name"},
-			{Kind: "ConfigMap", Path: "metadata.name"},
+			{Kind: "ConfigMap", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, cm),
 	})
@@ -344,7 +362,7 @@ func secretVolumeWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.volumes[].secret.secretName"},
-			{Kind: "Secret", Path: "metadata.name"},
+			{Kind: "Secret", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, sec),
 	})
@@ -388,7 +406,7 @@ func imagePullSecretWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.imagePullSecrets[].name"},
-			{Kind: "Secret", Path: "metadata.name"},
+			{Kind: "Secret", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, sec),
 	})
@@ -439,7 +457,7 @@ func secretWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].secretRef.name"},
-			{Kind: "Secret", Path: "metadata.name"},
+			{Kind: "Secret", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, cm, sec),
 	}
@@ -494,7 +512,7 @@ func configMapRefWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].configMapRef.name"},
-			{Kind: "ConfigMap", Path: "metadata.name"},
+			{Kind: "ConfigMap", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, cm, sec),
 	})
@@ -548,7 +566,9 @@ func serviceSelectorMismatch(twin bool) Scenario {
 		FaultClass: FaultSelectorMismatch,
 		DecidingFields: []DecidingField{
 			{Kind: "Service", Path: "spec.selector.app"},
-			{Kind: "Deployment", Path: "spec.template.metadata.labels.app"},
+			// Cross-document: removing the pod labels leaves a selector that still
+			// matches nothing — the emptiness persists, only the comparison is gone.
+			{Kind: "Deployment", Path: "spec.template.metadata.labels.app", Hides: true},
 		},
 		YAML: joinDocs(svc, dep),
 	})
@@ -600,8 +620,12 @@ func servicePortMismatch(twin bool) Scenario {
 		Group:      GroupNetworking,
 		FaultClass: FaultPortMismatch,
 		DecidingFields: []DecidingField{
+			// Removing targetPort genuinely repairs the bundle: it defaults to port
+			// (8080), which equals the containerPort — so it is fault-deleting.
 			{Kind: "Service", Path: "spec.ports[].targetPort"},
-			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort"},
+			// Removing containerPort only hides the pods' side of the comparison;
+			// the Service still targets 9090 that nothing is known to listen on.
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort", Hides: true},
 		},
 		YAML: joinDocs(svc, dep),
 	})
@@ -644,7 +668,7 @@ func serviceAccountWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.serviceAccountName"},
-			{Kind: "ServiceAccount", Path: "metadata.name"},
+			{Kind: "ServiceAccount", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, sa),
 	})
@@ -711,7 +735,7 @@ func storageClassWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "PersistentVolumeClaim", Path: "spec.storageClassName"},
-			{Kind: "StorageClass", Path: "metadata.name"},
+			{Kind: "StorageClass", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(pvc, sc),
 	})
@@ -750,7 +774,7 @@ func hpaTargetWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "HorizontalPodAutoscaler", Path: "spec.scaleTargetRef.name"},
-			{Kind: "Deployment", Path: "metadata.name"},
+			{Kind: "Deployment", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(hpa, dep),
 	})
@@ -785,7 +809,7 @@ func vpaTargetWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "VerticalPodAutoscaler", Path: "spec.targetRef.name"},
-			{Kind: "Deployment", Path: "metadata.name"},
+			{Kind: "Deployment", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(vpa, dep),
 	})
@@ -820,7 +844,7 @@ func priorityClassWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "Deployment", Path: "spec.template.spec.priorityClassName"},
-			{Kind: "PriorityClass", Path: "metadata.name"},
+			{Kind: "PriorityClass", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(dep, pc),
 	})
@@ -857,7 +881,7 @@ func roleBindingRoleWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "RoleBinding", Path: "roleRef.name"},
-			{Kind: "Role", Path: "metadata.name"},
+			{Kind: "Role", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(rb, role, sa),
 	})
@@ -892,7 +916,7 @@ func clusterRoleBindingRoleWrongName(twin bool) Scenario {
 		FaultClass: FaultRefNotFound,
 		DecidingFields: []DecidingField{
 			{Kind: "ClusterRoleBinding", Path: "roleRef.name"},
-			{Kind: "ClusterRole", Path: "metadata.name"},
+			{Kind: "ClusterRole", Path: "metadata.name", Hides: true},
 		},
 		YAML: joinDocs(crb, cr, sa),
 	})

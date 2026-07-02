@@ -131,11 +131,21 @@ model. This split is mandated — see "measurement contract".
 - **saliency(field, scenario)** = `baseline_accuracy − reduced_accuracy`, each a fraction
   over k trials. High positive = the field carries signal (removing it hurts diagnosis);
   ~0 = noise (safe to drop). The heatmap is the `field × scenario` matrix.
-- **the flip / deciding-field partition** — a field whose removal *deletes the fault*
-  (the injected locus) has an expected answer of `NoFaultFound`, not the fault. Scoring
-  it as "missed the fault" mechanically yields saliency 1.00 — tautological. So deciding
-  loci go to a **separate control table** (metric: `Recognized` = fraction that returned
-  `NoFaultFound` once the fault is gone), never the saliency map.
+- **the flip / deciding-field partition** — a deciding field (an injected locus) never
+  enters the saliency map: scoring its removal as "missed the fault" mechanically
+  yields saliency 1.00 — tautological. Deciding loci themselves split into two roles
+  (`DecidingField.Hides`), which must never be pooled:
+  - **fault-deleting** (`Hides: false`): removal deletes the fault itself — the
+    dangling reference site, or one side of a same-document comparison. Expected
+    answer is honestly `NoFaultFound`; Table 2a reports `Recognized`.
+  - **evidence-hiding** (`Hides: true`): removal only hides the counter-evidence —
+    the target object's `metadata.name`, the far side of a cross-document comparison.
+    The reference still dangles, so there is no single correct answer: `NoFaultFound`
+    is right under the prompt's charitable absent-field convention, the original
+    fault under a strict reading. Table 2b reports both rates side by side. (The old
+    pooled Table 2 showed `metadata.name` Recognized swinging 0.00–1.00 across
+    identical constructions — that spread is the model flip-flopping between the two
+    readings, not noise.)
 - **healthy twin** — every faulty scenario has a `<name>-twin`: the identical bundle
   with the single anomaly fixed (and statuses healthy), expected `NoFaultFound`.
   Twins measure the per-scenario false-positive rate: a high faulty baseline with a
@@ -188,8 +198,9 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
 - **Paper output.** Every rendered artifact is `paper/<name>.gen.tex` — an `\input`-able
   fragment, not a standalone doc. Compute → raw artifact → render `.gen.tex`; never mix
   measurement logic into LaTeX formatting.
-- **Paper tables today:** `heatmap.gen.tex` (Table 1 saliency map / Table 2 control-
-  Recognized / Table 3 healthy false-positive rate / Table 4 gated-out scenarios),
+- **Paper tables today:** `heatmap.gen.tex` (Table 1 saliency map / Table 2a
+  fault-deleting control / Table 2b evidence-hiding control / Table 3 healthy
+  false-positive rate / Table 4 gated-out scenarios),
   `confidence.gen.tex` (the same with 95% CIs and a Signal column), `fdr.gen.tex`
   (the multiple-comparison decision table: every saliency cell ranked by McNemar p
   and BH q, with the raw discordant seed counts — the audit trail for every bold

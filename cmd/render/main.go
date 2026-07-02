@@ -33,6 +33,14 @@ import (
 
 const noFault = "NoFaultFound"
 
+// locus is a resolved deciding-field location plus its ground-truth role:
+// hides == true means removal only hides the fault's counter-evidence (the
+// reference still dangles) instead of deleting the fault.
+type locus struct {
+	heatmap.Locus
+	hides bool
+}
+
 // cell aggregates all reduced trials for one (scenario, doc, field).
 type cell struct {
 	scenario     string
@@ -40,6 +48,7 @@ type cell struct {
 	field        string
 	valid        bool
 	deciding     bool
+	hides        bool // deciding subpopulation: evidence-hiding, not fault-deleting
 	total        int
 	matchFault   int            // answer == scenario fault (saliency uses this)
 	matchNoFault int            // answer == NoFaultFound (control "recognized" uses this)
@@ -64,8 +73,9 @@ func main() {
 
 	// Resolve each scenario's deciding-field loci, then normalize their pointers to
 	// the same canonical field-key form the records carry (array indices -> *), so
-	// decides() compares like with like.
-	deciding := map[string][]heatmap.Locus{}
+	// decides() compares like with like. Each locus keeps its ground-truth role:
+	// fault-deleting vs evidence-hiding (dataset.DecidingField.Hides).
+	deciding := map[string][]locus{}
 	for _, s := range dataset.All() {
 		for _, df := range s.DecidingFields {
 			ls, err := heatmap.ResolveLeaves(s.YAML, df.Kind, df.Path)
@@ -74,8 +84,8 @@ func main() {
 			}
 			for i := range ls {
 				ls[i].Pointer = heatmap.NormalizeKey(ls[i].Pointer)
+				deciding[s.Name] = append(deciding[s.Name], locus{ls[i], df.Hides})
 			}
-			deciding[s.Name] = append(deciding[s.Name], ls...)
 		}
 	}
 
@@ -115,9 +125,10 @@ func main() {
 		key := fmt.Sprintf("%s\x00%d\x00%s", r.Scenario, doc, field)
 		c, seen := cells[key]
 		if !seen {
+			dec, hides := decides(doc, field, deciding[r.Scenario])
 			c = cell{
 				scenario: r.Scenario, kind: r.Kind, field: field, valid: r.Valid,
-				deciding:  decides(doc, field, deciding[r.Scenario]),
+				deciding: dec, hides: hides,
 				seedFault: map[int64]bool{},
 			}
 			order = append(order, key)
@@ -217,19 +228,39 @@ func main() {
 	}
 	b.WriteString("\\bottomrule\n\\end{tabular}\n\n")
 
-	// Population 2: the control — deciding loci, where the flip makes expected =
-	// NoFaultFound. Recognized = fraction of trials that correctly returned it.
-	b.WriteString("% Table 2 — control: deciding-field loci. Removing these deletes the fault, so\n")
-	b.WriteString("% expected flips to NoFaultFound; Recognized = fraction that returned it (the rest\n")
-	b.WriteString("% hallucinated the now-absent fault). Not saliency — these are not in the map.\n")
+	// Population 2, split by locus role (see dataset.DecidingField.Hides): only
+	// the fault-deleting loci carry an unambiguous expected answer.
+	b.WriteString("% Table 2a — control: fault-deleting loci. Removing these deletes the fault\n")
+	b.WriteString("% itself (the dangling reference site, or one side of a same-document\n")
+	b.WriteString("% comparison), so expected flips to NoFaultFound; Recognized = fraction that\n")
+	b.WriteString("% returned it (the rest hallucinated the now-absent fault). Not saliency —\n")
+	b.WriteString("% these are not in the map.\n")
 	b.WriteString("\\begin{tabular}{lllcr}\n\\toprule\nScenario & Kind & Field & Valid & Recognized \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if !c.deciding || gated[c.scenario] {
+		if !c.deciding || c.hides || gated[c.scenario] {
 			continue
 		}
 		recognized := frac(c.matchNoFault, c.total)
 		fmt.Fprintf(&b, "%s & %s & \\texttt{%s} & %s & %.2f \\\\\n", escapeTeX(c.scenario), escapeTeX(c.kind), escapeTeX(c.field), validMark(c.valid), recognized)
+	}
+	b.WriteString("\\bottomrule\n\\end{tabular}\n\n")
+
+	b.WriteString("% Table 2b — control: evidence-hiding loci. Removing these (the target\n")
+	b.WriteString("% object's name, the far side of a cross-document comparison) only hides the\n")
+	b.WriteString("% fault's counter-evidence — the reference still dangles. There is no single\n")
+	b.WriteString("% correct answer: NoFaultFound is right under the prompt's charitable\n")
+	b.WriteString("% absent-field convention, the original fault under a strict reading. Both\n")
+	b.WriteString("% rates are reported; do not pool this population with Table 2a.\n")
+	b.WriteString("\\begin{tabular}{lllcrr}\n\\toprule\nScenario & Kind & Field & Valid & NoFault rate & Fault rate \\\\\n\\midrule\n")
+	for _, key := range order {
+		c := cells[key]
+		if !c.deciding || !c.hides || gated[c.scenario] {
+			continue
+		}
+		fmt.Fprintf(&b, "%s & %s & \\texttt{%s} & %s & %.2f & %.2f \\\\\n",
+			escapeTeX(c.scenario), escapeTeX(c.kind), escapeTeX(c.field), validMark(c.valid),
+			frac(c.matchNoFault, c.total), frac(c.matchFault, c.total))
 	}
 	b.WriteString("\\bottomrule\n\\end{tabular}\n")
 
@@ -344,16 +375,31 @@ func main() {
 	}
 	ci.WriteString("\\bottomrule\n\\end{tabular}\n\n")
 
-	ci.WriteString("% Table B — control: deciding loci, Recognized (fraction returning\n% NoFaultFound) with 95% Wilson CI.\n")
+	ci.WriteString("% Table B1 — control: fault-deleting loci, Recognized (fraction returning\n% NoFaultFound) with 95% Wilson CI.\n")
 	ci.WriteString("\\begin{tabular}{lllrc}\n\\toprule\nScenario & Kind & Field & Recognized & 95\\% CI \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if !c.deciding || gated[c.scenario] {
+		if !c.deciding || c.hides || gated[c.scenario] {
 			continue
 		}
 		lo, hi := wilson(c.matchNoFault, c.total)
 		fmt.Fprintf(&ci, "%s & %s & \\texttt{%s} & %.2f & [%.2f, %.2f] \\\\\n",
 			escapeTeX(c.scenario), escapeTeX(c.kind), escapeTeX(c.field), frac(c.matchNoFault, c.total), lo, hi)
+	}
+	ci.WriteString("\\bottomrule\n\\end{tabular}\n\n")
+
+	ci.WriteString("% Table B2 — control: evidence-hiding loci; no single correct answer (see\n% heatmap.gen.tex Table 2b), so both readings carry 95% Wilson CIs.\n")
+	ci.WriteString("\\begin{tabular}{lllrcrc}\n\\toprule\nScenario & Kind & Field & NoFault rate & 95\\% CI & Fault rate & 95\\% CI \\\\\n\\midrule\n")
+	for _, key := range order {
+		c := cells[key]
+		if !c.deciding || !c.hides || gated[c.scenario] {
+			continue
+		}
+		nlo, nhi := wilson(c.matchNoFault, c.total)
+		flo, fhi := wilson(c.matchFault, c.total)
+		fmt.Fprintf(&ci, "%s & %s & \\texttt{%s} & %.2f & [%.2f, %.2f] & %.2f & [%.2f, %.2f] \\\\\n",
+			escapeTeX(c.scenario), escapeTeX(c.kind), escapeTeX(c.field),
+			frac(c.matchNoFault, c.total), nlo, nhi, frac(c.matchFault, c.total), flo, fhi)
 	}
 	ci.WriteString("\\bottomrule\n\\end{tabular}\n")
 
@@ -476,16 +522,26 @@ func main() {
 	fmt.Printf("wrote %s (%d twin pairs)\n", twPath, len(pairs))
 }
 
-// decides reports whether the field at (doc, pointer) is an ancestor-or-equal of
-// a concrete deciding locus in the same document — i.e. removing it removes the
-// fault.
-func decides(doc int, field string, loci []heatmap.Locus) bool {
+// decides reports whether the field at (doc, pointer) is an ancestor-or-equal
+// of a concrete deciding locus in the same document, and whether that removal
+// merely hides the fault's counter-evidence rather than deleting the fault.
+// hides is true only when EVERY covered locus is evidence-hiding: if the field
+// also spans a fault-deleting locus, the removal genuinely deletes the fault.
+func decides(doc int, field string, loci []locus) (deciding, hides bool) {
+	hides = true
 	for _, l := range loci {
 		if l.Doc == doc && (field == l.Pointer || strings.HasPrefix(l.Pointer, field+"/")) {
-			return true
+			deciding = true
+			if !l.hides {
+				hides = false
+			}
 		}
 	}
-	return false
+	if !deciding {
+		hides = false
+	}
+
+	return deciding, hides
 }
 
 func readShards(dir string) []heatmap.Record {
