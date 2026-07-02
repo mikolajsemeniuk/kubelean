@@ -33,6 +33,7 @@ var (
 	group                 string
 	k, numCtx, numPredict int
 	temp                  float64
+	baselineOnly          bool
 )
 
 // buildSchema constrains the model to clean JSON whose fault_class is one of the
@@ -75,6 +76,7 @@ func main() {
 	flag.Float64Var(&temp, "temp", 0.7, "sampling temperature (>0 so seeds give varied draws)")
 	flag.IntVar(&numCtx, "num-ctx", 8192, "context window — avoids silent truncation of multi-doc prompts")
 	flag.IntVar(&numPredict, "num-predict", 256, "max output tokens")
+	flag.BoolVar(&baselineOnly, "baseline-only", false, "run only the baselines and print accuracy — the cheap #12 smoke before a full run; writes no shard")
 	flag.Parse()
 
 	scenarios := dataset.Scenarios(group)
@@ -113,6 +115,7 @@ func main() {
 		// baseline: the full bundle, k trials.
 		in.Prompt = prompt + "\n\nManifests:\n" + s.YAML
 		baseCorrect := 0
+		answers := map[string]int{}
 		for i := 0; i < k; i++ {
 			r := trial(ctx, client, in, i, s, digest)
 			r.Variant = "baseline"
@@ -120,7 +123,18 @@ func main() {
 			if r.Answer != nil && *r.Answer == s.FaultClass {
 				baseCorrect++
 			}
+			if r.Answer != nil {
+				answers[*r.Answer]++
+			} else {
+				answers["<unparseable>"]++
+			}
 			recs = append(recs, r)
+		}
+
+		if baselineOnly {
+			fmt.Printf("%s [%s]: baseline %d/%d correct, answers %v (baseline-only, no shard written)\n",
+				s.Name, s.Group, baseCorrect, k, answers)
+			continue
 		}
 
 		targets, err := heatmap.Keys(s.YAML)

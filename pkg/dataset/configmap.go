@@ -9,9 +9,10 @@ import (
 // ConfigmapParams are the values substituted into templates/cm.yaml. Data is
 // rendered in sorted key order, so output is deterministic.
 type ConfigmapParams struct {
-	Name      string
-	Namespace string
-	Data      map[string]string
+	Name       string
+	Namespace  string
+	Data       map[string]string
+	ServerMeta // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/cm.yaml

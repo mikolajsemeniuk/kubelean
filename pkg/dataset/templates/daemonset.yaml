@@ -1,16 +1,31 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   selector:
     matchLabels:
       app: {{ .SelectorApp }}
   template:
     metadata:
+      {{- if .Created }}
+      creationTimestamp: null
+      {{- end }}
       labels:
         app: {{ .PodApp }}
     spec:
@@ -19,3 +34,23 @@ spec:
           image: {{ .Image }}
           ports:
             - containerPort: {{ .ContainerPort }}
+{{- /* status numbers assume a 3-node cluster */ -}}
+{{- if eq .Status "healthy" }}
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberAvailable: 3
+  numberMisscheduled: 0
+  numberReady: 3
+  observedGeneration: {{ .Generation }}
+  updatedNumberScheduled: 3
+{{- else if eq .Status "failing" }}
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberMisscheduled: 0
+  numberReady: 0
+  numberUnavailable: 3
+  observedGeneration: {{ .Generation }}
+  updatedNumberScheduled: 3
+{{- end }}

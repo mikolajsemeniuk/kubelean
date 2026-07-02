@@ -1,8 +1,17 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 data:
   {{- range $k, $v := .Data }}
   {{ $k }}: {{ $v }}

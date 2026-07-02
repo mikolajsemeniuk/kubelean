@@ -13,6 +13,8 @@ type PVCParams struct {
 	App          string
 	Storage      string
 	StorageClass string // optional: spec.storageClassName ("" omits it)
+	ServerMeta          // optional: server-assigned metadata (kubectl get shape)
+	Status       string // optional: StatusHealthy (Bound) | StatusFailing (Pending)
 }
 
 //go:embed templates/pvc.yaml

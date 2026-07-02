@@ -1,10 +1,22 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   serviceName: {{ .Name }}
   replicas: {{ .Replicas }}
@@ -13,6 +25,9 @@ spec:
       app: {{ .SelectorApp }}
   template:
     metadata:
+      {{- if .Created }}
+      creationTimestamp: null
+      {{- end }}
       labels:
         app: {{ .PodApp }}
     spec:
@@ -21,3 +36,26 @@ spec:
           image: {{ .Image }}
           ports:
             - containerPort: {{ .ContainerPort }}
+{{- if eq .Status "healthy" }}
+status:
+  availableReplicas: {{ .Replicas }}
+  collisionCount: 0
+  currentReplicas: {{ .Replicas }}
+  currentRevision: {{ .Name }}-6d8f9c7b4
+  observedGeneration: {{ .Generation }}
+  readyReplicas: {{ .Replicas }}
+  replicas: {{ .Replicas }}
+  updateRevision: {{ .Name }}-6d8f9c7b4
+  updatedReplicas: {{ .Replicas }}
+{{- else if eq .Status "failing" }}
+status:
+  availableReplicas: 0
+  collisionCount: 0
+  currentReplicas: {{ .Replicas }}
+  currentRevision: {{ .Name }}-6d8f9c7b4
+  observedGeneration: {{ .Generation }}
+  readyReplicas: 0
+  replicas: {{ .Replicas }}
+  updateRevision: {{ .Name }}-6d8f9c7b4
+  updatedReplicas: {{ .Replicas }}
+{{- end }}

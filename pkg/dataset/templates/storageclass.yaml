@@ -1,9 +1,18 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
   name: {{ .Name }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 provisioner: {{ .Provisioner }}
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer

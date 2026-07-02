@@ -1,9 +1,18 @@
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
   name: {{ .Name }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 value: {{ .Value }}
 globalDefault: false
 description: {{ .Description }}

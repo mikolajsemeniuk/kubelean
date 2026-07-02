@@ -19,6 +19,8 @@ type StatefulSetParams struct {
 	ContainerName string
 	Image         string
 	ContainerPort int
+	ServerMeta           // optional: server-assigned metadata (kubectl get shape)
+	Status        string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
 
 //go:embed templates/statefulset.yaml

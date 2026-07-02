@@ -13,6 +13,7 @@ type PriorityClassParams struct {
 	App         string
 	Value       int
 	Description string
+	ServerMeta  // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/priorityclass.yaml

@@ -8,9 +8,10 @@ import (
 
 // ServiceAccountParams are the values substituted into templates/serviceaccount.yaml.
 type ServiceAccountParams struct {
-	Name      string
-	Namespace string
-	App       string
+	Name       string
+	Namespace  string
+	App        string
+	ServerMeta // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/serviceaccount.yaml

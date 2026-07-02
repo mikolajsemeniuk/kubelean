@@ -80,6 +80,12 @@ func Scenarios(group string) []Scenario {
 // selectorLabelMismatch is a single Deployment whose pod template labels do not
 // match its own selector (app=web vs app=web-frontend). Diagnosing it requires
 // reading both label fields, so neither alone is the deciding field.
+//
+// Note on all four single-workload selector scenarios (Deployment, StatefulSet,
+// DaemonSet, ReplicaSet): a live API server rejects this manifest at admission
+// ("selector does not match template labels"), so their failing status is an
+// as-if — they model the pre-apply review case, kept in kubectl-get shape so
+// every scenario's field population is comparable.
 func selectorLabelMismatch() Scenario {
 	dep := NewDeployment(DeploymentParams{
 		Name:          "web",
@@ -91,6 +97,8 @@ func selectorLabelMismatch() Scenario {
 		ContainerName: "web",
 		Image:         "nginx:1.25",
 		ContainerPort: 80,
+		ServerMeta:    srv("18f0da56-db3c-43bf-a378-f3fb0f06c6a5", "825289"),
+		Status:        StatusFailing,
 	})
 
 	out := Scenario{
@@ -122,6 +130,8 @@ func statefulSetSelectorMismatch() Scenario {
 		ContainerName: "db",
 		Image:         "postgres:16.2",
 		ContainerPort: 5432,
+		ServerMeta:    srv("2fa8047b-869d-4724-a70d-71337826cfd5", "531795"),
+		Status:        StatusFailing,
 	})
 
 	return Scenario{
@@ -149,6 +159,8 @@ func daemonSetSelectorMismatch() Scenario {
 		ContainerName: "agent",
 		Image:         "fluent/fluent-bit:3.0.7",
 		ContainerPort: 2020,
+		ServerMeta:    srv("d34cc84d-ef05-46c7-a721-d50e28b1e8f8", "306140"),
+		Status:        StatusFailing,
 	})
 
 	return Scenario{
@@ -179,9 +191,17 @@ func pvcClaimWrongName() Scenario {
 		ContainerPort: 8080,
 		VolumeKind:    "pvc",
 		VolumeRef:     "api-data",
+		ServerMeta:    srv("6c0f7a1e-ae97-4bc9-a624-94f5e2bea039", "883794"),
+		Status:        StatusFailing,
 	})
 
-	pvc := NewPVC(PVCParams{Name: "api-datas", Namespace: "production", App: "api", Storage: "10Gi"})
+	// The mis-named claim itself is a healthy, Bound PVC — it is simply not the
+	// one the Deployment asks for.
+	pvc := NewPVC(PVCParams{
+		Name: "api-datas", Namespace: "production", App: "api", Storage: "10Gi",
+		ServerMeta: srv("47c968e0-b76d-4f85-a08e-e58cbd43b5d8", "380426"),
+		Status:     StatusHealthy,
+	})
 
 	return Scenario{
 		Name:       "pvc-claim-wrong-name",
@@ -212,11 +232,14 @@ func configMapVolumeWrongName() Scenario {
 		ContainerPort: 8080,
 		VolumeKind:    "configMap",
 		VolumeRef:     "api-files",
+		ServerMeta:    srv("684f1f14-f07d-4970-a119-b198eb64379c", "364255"),
+		Status:        StatusFailing,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
 		Name: "api-file", Namespace: "production",
-		Data: map[string]string{"app.conf": "level=info"},
+		Data:       map[string]string{"app.conf": "level=info"},
+		ServerMeta: srv("c534b5a0-3d0c-4730-aff7-8756bcf71a2e", "391375"),
 	})
 
 	return Scenario{
@@ -246,11 +269,14 @@ func secretVolumeWrongName() Scenario {
 		ContainerPort: 8080,
 		VolumeKind:    "secret",
 		VolumeRef:     "api-certs",
+		ServerMeta:    srv("0283c6bf-adad-403a-a2ea-345f6ed2a76a", "313324"),
+		Status:        StatusFailing,
 	})
 
 	sec := NewSecret(SecretParams{
 		Name: "api-cert", Namespace: "production",
 		StringData: map[string]string{"tls.crt": "redacted-cert", "tls.key": "redacted-key"},
+		ServerMeta: srv("ce0f4418-e6c8-4394-a7a3-24f4b0f42f21", "275846"),
 	})
 
 	return Scenario{
@@ -281,12 +307,15 @@ func imagePullSecretWrongName() Scenario {
 		Image:           "ghcr.io/acme/api:2.3.1",
 		ContainerPort:   8080,
 		ImagePullSecret: "registry-creds",
+		ServerMeta:      srv("241c3377-c6c1-4b8a-adc5-bd7b44c3804b", "993906"),
+		Status:          StatusFailing,
 	})
 
 	sec := NewSecret(SecretParams{
 		Name:       "registry-cred",
 		Namespace:  "production",
 		StringData: map[string]string{".dockerconfigjson": "redacted-docker-config"},
+		ServerMeta: srv("dfd4b5d5-74fd-4d93-a55d-a947f62d9c70", "703368"),
 	})
 
 	return Scenario{
@@ -318,17 +347,21 @@ func secretWrongName() Scenario {
 		ContainerPort: 8080,
 		ConfigMapRef:  "api-config",
 		SecretRef:     "api-secret",
+		ServerMeta:    srv("5e2ef0e0-0946-4787-a5cc-dc0a2531bc43", "152839"),
+		Status:        StatusFailing,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
 		Name: "api-config", Namespace: "production",
-		Data: map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		ServerMeta: srv("aa6a9647-4517-4529-a6d9-73e1c5d4da0a", "228326"),
 	})
 
 	sec := NewSecret(SecretParams{
 		Name:       "api-secrets",
 		Namespace:  "production",
 		StringData: map[string]string{"API_KEY": "redacted-api-key", "DB_PASSWORD": "redacted-password"},
+		ServerMeta: srv("dc55e19e-1e43-4e98-aa4a-78d86ea73f6b", "228481"),
 	})
 
 	out := Scenario{
@@ -364,17 +397,21 @@ func configMapRefWrongName() Scenario {
 		ContainerPort: 8080,
 		ConfigMapRef:  "api-config",
 		SecretRef:     "api-secret",
+		ServerMeta:    srv("da64943b-5bfc-40c4-aa5e-c5f7d6f776d7", "375965"),
+		Status:        StatusFailing,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
 		Name: "api-configs", Namespace: "production",
-		Data: map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		ServerMeta: srv("264acd9c-8700-4e71-a64e-5dc16a3e6b37", "605340"),
 	})
 
 	sec := NewSecret(SecretParams{
 		Name:       "api-secret",
 		Namespace:  "production",
 		StringData: map[string]string{"API_KEY": "redacted-api-key", "DB_PASSWORD": "redacted-password"},
+		ServerMeta: srv("c2a1fecc-dc79-4e95-a2f3-de1acef757b8", "435786"),
 	})
 
 	return Scenario{
@@ -395,6 +432,9 @@ func configMapRefWrongName() Scenario {
 // is purely the Service selector against the pod labels, so both are deciding.
 // Same SelectorMismatch root cause as the Deployment case, on a different Kind.
 func serviceSelectorMismatch() Scenario {
+	// Both statuses are healthy: the Deployment's pods run fine, and a Service
+	// carries no endpoint symptom in its own status — the emptiness lives in
+	// Endpoints objects, which are not part of the bundle.
 	dep := NewDeployment(DeploymentParams{
 		Name:          "web",
 		Namespace:     "production",
@@ -405,6 +445,8 @@ func serviceSelectorMismatch() Scenario {
 		ContainerName: "web",
 		Image:         "nginx:1.25",
 		ContainerPort: 8080,
+		ServerMeta:    srv("cf28050f-91c9-430e-ae30-fbdc82e0f669", "131895"),
+		Status:        StatusHealthy,
 	})
 
 	svc := NewService(ServiceParams{
@@ -417,6 +459,8 @@ func serviceSelectorMismatch() Scenario {
 		// unequal port would read as a spurious PortMismatch and mask the selector.
 		Port:       8080,
 		TargetPort: 8080,
+		ServerMeta: srv("bec0ae58-98c3-45b2-a889-b30bda34dcfb", "490059"),
+		Status:     StatusHealthy,
 	})
 
 	return Scenario{
@@ -437,6 +481,8 @@ func serviceSelectorMismatch() Scenario {
 // listens on. Selector and labels are consistent; the fault is targetPort vs
 // containerPort, so both are deciding.
 func servicePortMismatch() Scenario {
+	// Both statuses are healthy: pods are ready and the Service exists; the
+	// symptom (refused connections) only shows at traffic time, not in status.
 	dep := NewDeployment(DeploymentParams{
 		Name:          "checkout",
 		Namespace:     "production",
@@ -447,6 +493,8 @@ func servicePortMismatch() Scenario {
 		ContainerName: "checkout",
 		Image:         "ghcr.io/acme/checkout:1.4.0",
 		ContainerPort: 8080,
+		ServerMeta:    srv("9c99aea1-48a8-461e-aa79-348a1c0106d2", "783851"),
+		Status:        StatusHealthy,
 	})
 
 	svc := NewService(ServiceParams{
@@ -458,6 +506,8 @@ func servicePortMismatch() Scenario {
 		// removing it must restore a fully healthy manifest for the flip to hold.
 		Port:       8080,
 		TargetPort: 9090, // pods listen on 8080
+		ServerMeta: srv("ac90a999-0245-4a18-afbf-0a3faee73512", "539940"),
+		Status:     StatusHealthy,
 	})
 
 	return Scenario{
@@ -489,10 +539,13 @@ func serviceAccountWrongName() Scenario {
 		Image:              "ghcr.io/acme/api:2.3.1",
 		ContainerPort:      8080,
 		ServiceAccountName: "api-runner",
+		ServerMeta:         srv("38b0342f-5926-41c5-a94a-6a8a0d75b137", "683480"),
+		Status:             StatusFailing,
 	})
 
 	sa := NewServiceAccount(ServiceAccountParams{
 		Name: "api-runners", Namespace: "production", App: "api",
+		ServerMeta: srv("18781033-649a-4489-a0ec-9ab31ac2f09d", "408953"),
 	})
 
 	return Scenario{
@@ -521,6 +574,8 @@ func replicaSetSelectorMismatch() Scenario {
 		ContainerName: "web",
 		Image:         "nginx:1.25",
 		ContainerPort: 8080,
+		ServerMeta:    srv("0b7bbad4-d218-4413-a6f6-1fbdebd23bea", "615340"),
+		Status:        StatusFailing,
 	})
 
 	return Scenario{
@@ -541,9 +596,14 @@ func storageClassWrongName() Scenario {
 	pvc := NewPVC(PVCParams{
 		Name: "api-data", Namespace: "production", App: "api",
 		Storage: "10Gi", StorageClass: "fast-ssd",
+		ServerMeta: srv("e3da9fde-3e4c-4573-ad94-eab4f9c2645f", "193082"),
+		Status:     StatusFailing, // the claim stays Pending
 	})
 
-	sc := NewStorageClass(StorageClassParams{Name: "fast-ssds", App: "api", Provisioner: "ebs.csi.aws.com"})
+	sc := NewStorageClass(StorageClassParams{
+		Name: "fast-ssds", App: "api", Provisioner: "ebs.csi.aws.com",
+		ServerMeta: srv("fd64cf11-c8ac-4a73-ae4f-b3a8d86e1caa", "666583"),
+	})
 
 	return Scenario{
 		Name:       "storageclass-wrong-name",
@@ -560,15 +620,23 @@ func storageClassWrongName() Scenario {
 // hpaTargetWrongName is an HPA scaling scaleTargetRef "api", but the Deployment is
 // named "api-server" — the HPA targets nothing. Ref_NotFound.
 func hpaTargetWrongName() Scenario {
+	// The Deployment itself is healthy — only the HPA dangles, so only its
+	// status is failing. Its condition text stays symptom-only: the real
+	// FailedGetScale message names the missing target, which would plant the
+	// answer in a non-deciding field.
 	dep := NewDeployment(DeploymentParams{
 		Name: "api-server", Namespace: "production", App: "api",
 		Replicas: 2, SelectorApp: "api", PodApp: "api",
 		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
+		ServerMeta: srv("7a1c1454-6c27-4260-ae76-457ee5549e01", "910222"),
+		Status:     StatusHealthy,
 	})
 
 	hpa := NewHPA(HPAParams{
 		Name: "api", Namespace: "production", App: "api",
 		TargetKind: "Deployment", TargetName: "api", MinReplicas: 2, MaxReplicas: 10,
+		ServerMeta: srv("447a28f5-5360-4ab3-a82b-e351676c6eb2", "164779"),
+		Status:     StatusFailing,
 	})
 
 	return Scenario{
@@ -590,11 +658,15 @@ func vpaTargetWrongName() Scenario {
 		Name: "api-server", Namespace: "production", App: "api",
 		Replicas: 2, SelectorApp: "api", PodApp: "api",
 		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
+		ServerMeta: srv("a678d32f-eb25-442e-a0c2-9acdebf50b49", "803902"),
+		Status:     StatusHealthy,
 	})
 
 	vpa := NewVPA(VPAParams{
 		Name: "api", Namespace: "production", App: "api",
 		TargetKind: "Deployment", TargetName: "api",
+		ServerMeta: srv("8fc184fa-3829-4b90-adc1-19acca6c9528", "312595"),
+		Status:     StatusFailing,
 	})
 
 	return Scenario{
@@ -618,9 +690,14 @@ func priorityClassWrongName() Scenario {
 		Replicas: 2, SelectorApp: "api", PodApp: "api",
 		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
 		PriorityClassName: "high-priority",
+		ServerMeta:        srv("0d5c514b-754f-4592-ae98-fec791ad64f3", "533125"),
+		Status:            StatusFailing,
 	})
 
-	pc := NewPriorityClass(PriorityClassParams{Name: "high-priorities", App: "api", Value: 1000000, Description: "critical API pods"})
+	pc := NewPriorityClass(PriorityClassParams{
+		Name: "high-priorities", App: "api", Value: 1000000, Description: "critical API pods",
+		ServerMeta: srv("ab803b47-5580-4ffe-a95e-cc22c6ddeb92", "186587"),
+	})
 
 	return Scenario{
 		Name:       "priorityclass-wrong-name",
@@ -638,11 +715,20 @@ func priorityClassWrongName() Scenario {
 // ServiceAccount that exists, but the only Role is named "pod-readers" — the grant
 // dangles. Ref_NotFound; the subject reference is the healthy distractor.
 func roleBindingRoleWrongName() Scenario {
-	sa := NewServiceAccount(ServiceAccountParams{Name: "api-sa", Namespace: "production", App: "api"})
-	role := NewRole(RoleParams{Name: "pod-readers", Namespace: "production", App: "api"})
+	// RBAC kinds and ServiceAccounts have no status subresource — a dangling
+	// grant only surfaces at authorization time, so there is nothing to fail.
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "api-sa", Namespace: "production", App: "api",
+		ServerMeta: srv("6f6745bf-a31f-436d-ac1f-bc767edb29d8", "338563"),
+	})
+	role := NewRole(RoleParams{
+		Name: "pod-readers", Namespace: "production", App: "api",
+		ServerMeta: srv("6d5f3e89-0a38-4c55-a448-81a702ab3f25", "615617"),
+	})
 	rb := NewRoleBinding(RoleBindingParams{
 		Name: "api-read", Namespace: "production", App: "api",
 		ServiceAccountName: "api-sa", RoleName: "pod-reader",
+		ServerMeta: srv("91b527ad-3120-41f7-a7d6-6a80dad3b594", "349902"),
 	})
 
 	return Scenario{
@@ -661,11 +747,18 @@ func roleBindingRoleWrongName() Scenario {
 // "node-reader" to a ServiceAccount that exists, but the only ClusterRole is named
 // "node-readers" — kubectl auth can-i returns no. Ref_NotFound.
 func clusterRoleBindingRoleWrongName() Scenario {
-	sa := NewServiceAccount(ServiceAccountParams{Name: "api-sa", Namespace: "production", App: "api"})
-	cr := NewClusterRole(ClusterRoleParams{Name: "node-readers", App: "api"})
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "api-sa", Namespace: "production", App: "api",
+		ServerMeta: srv("54645a22-fb49-4fef-a63a-174389824a05", "469961"),
+	})
+	cr := NewClusterRole(ClusterRoleParams{
+		Name: "node-readers", App: "api",
+		ServerMeta: srv("e6a0b733-6944-4ef7-a828-9277b629a14f", "531604"),
+	})
 	crb := NewClusterRoleBinding(ClusterRoleBindingParams{
 		Name: "api-node-read", App: "api", Namespace: "production",
 		ServiceAccountName: "api-sa", ClusterRoleName: "node-reader",
+		ServerMeta: srv("5ecd7f8a-6eec-45f9-a3be-40609d315b06", "661120"),
 	})
 
 	return Scenario{
@@ -697,17 +790,21 @@ func healthyBundle() Scenario {
 		ContainerPort: 8080,
 		ConfigMapRef:  "api-config",
 		SecretRef:     "api-secret",
+		ServerMeta:    srv("0dba9035-6531-4d38-a875-84599bb99885", "415975"),
+		Status:        StatusHealthy,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
 		Name: "api-config", Namespace: "production",
-		Data: map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		ServerMeta: srv("e756bd51-2da0-494e-adc0-013ed11c33ba", "398895"),
 	})
 
 	sec := NewSecret(SecretParams{
 		Name:       "api-secret",
 		Namespace:  "production",
 		StringData: map[string]string{"API_KEY": "redacted-api-key", "DB_PASSWORD": "redacted-password"},
+		ServerMeta: srv("4f843458-ca1e-4c30-a2a7-ece4b440d163", "588790"),
 	})
 
 	return Scenario{
@@ -716,6 +813,18 @@ func healthyBundle() Scenario {
 		FaultClass: FaultNoFault,
 		YAML:       joinDocs(dep, cm, sec),
 	}
+}
+
+// serverCreated is the fixed creationTimestamp every catalog object carries:
+// generators must render byte-identical output on every call, so no clock is
+// ever read.
+const serverCreated = "2026-06-01T09:00:00Z"
+
+// srv builds one object's ServerMeta: the fixed timestamp, generation 1, and a
+// hand-picked literal uid + resourceVersion (deterministic by construction).
+// Templates whose Kind has no generation field simply never render it.
+func srv(uid, resourceVersion string) ServerMeta {
+	return ServerMeta{Created: serverCreated, Generation: 1, ResourceVersion: resourceVersion, UID: uid}
 }
 
 // mustRender executes a parsed template against data and returns the trimmed

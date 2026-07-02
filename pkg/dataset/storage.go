@@ -12,6 +12,7 @@ type StorageClassParams struct {
 	Name        string
 	App         string
 	Provisioner string
+	ServerMeta  // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/storageclass.yaml

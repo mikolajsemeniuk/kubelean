@@ -16,6 +16,8 @@ type HPAParams struct {
 	TargetName  string // spec.scaleTargetRef.name
 	MinReplicas int
 	MaxReplicas int
+	ServerMeta         // optional: server-assigned metadata (kubectl get shape)
+	Status      string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
 
 //go:embed templates/hpa.yaml
@@ -36,6 +38,8 @@ type VPAParams struct {
 	App        string
 	TargetKind string // spec.targetRef.kind
 	TargetName string // spec.targetRef.name
+	ServerMeta        // optional: server-assigned metadata (kubectl get shape)
+	Status     string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
 
 //go:embed templates/vpa.yaml

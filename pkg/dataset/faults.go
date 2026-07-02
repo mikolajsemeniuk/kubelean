@@ -27,7 +27,12 @@ var faults = []Fault{
 	{FaultRefNotFound, "a name reference (secretRef.name, configMapRef.name, a key in valueFrom, a volume claimName, or serviceAccountName) points to an object or key that is not present in the manifests"},
 	{FaultSelectorMismatch, "the key/value pairs under spec.selector.matchLabels are not identical to those under spec.template.metadata.labels (compare each value, not just the keys), or a Service spec.selector does not equal the pod labels"},
 	{FaultPortMismatch, "a Service's spec.ports targetPort does not equal the containerPort exposed by the pods its selector matches, so connections to the Service reach a port where nothing is listening"},
-	{FaultNoFault, "every reference resolves, every selector matches its target labels, and every Service targetPort matches a pod containerPort — the manifests are healthy"},
+	// The closing clause matters for the flip: manifests now carry status blocks,
+	// so after a deciding field is removed the symptoms (unavailable replicas)
+	// remain while the root cause is gone — NoFaultFound must mean "no root cause
+	// identifiable", not "everything looks healthy", or the control is unanswerable.
+	// A/B-smoked 2026-07 (k=3): rewording did not move baselines vs the old text.
+	{FaultNoFault, "every reference resolves, every selector matches its target labels, and every Service targetPort matches a pod containerPort — none of the faults above is identifiable; a status reporting unavailability does not by itself identify one"},
 }
 
 // FaultClasses returns just the class names — used as the schema enum.

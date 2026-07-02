@@ -33,7 +33,11 @@ The **measurement pipeline is built and working**; the *product* (`reduce` + der
 levels) is not yet.
 
 - **m1 (faulty-resource generator) — DONE.** 31 resource-Kind generators, a scenario
-  catalog with ground-truth fault loci, seeded/deterministic.
+  catalog with ground-truth fault loci, seeded/deterministic. Since 2026-07 every
+  catalog scenario renders in **realistic `kubectl get -o yaml` shape** (server
+  metadata + per-Kind status — see "server shape" below). **All data/ shards produced
+  before that are stale**: the YAML changed, so a full re-run is required before
+  rendering anything for the paper.
 - **m2 (inspect benchmark + heatmap + CI + gate) — DONE.** Producer runs the model,
   writes raw per-trial JSONL; renderer computes saliency with confidence intervals and
   emits the paper tables. Includes the flip (control partition), Wilson/Newcombe CIs,
@@ -110,6 +114,19 @@ model. This split is mandated — see "measurement contract".
   concrete match.
 - **field-remover kernel** — `heatmap.Keys` + `heatmap.Remove`. Deterministic. Both the
   future `reduce` and the current per-trial ablation are thin wrappers. Build once, reuse.
+- **server shape** (`pkg/dataset/server.go` + optional template blocks) — every catalog
+  scenario renders as `kubectl get -o yaml` would return it: `ServerMeta`
+  (creationTimestamp/generation/resourceVersion/uid, embedded in each Params; zero
+  value omits everything, so non-opted scenarios render byte-identical) plus a
+  per-Kind `Status` block (`StatusHealthy` / `StatusFailing` / `""`), set explicitly
+  per scenario in scenarios.go. Secrets render base64 `data` (the API never returns
+  `stringData`). This is what makes status/server fields measurable in the heatmap.
+  Deliberately absent (leak-by-design otherwise): `managedFields` (kubectl ≥1.21
+  hides them in get) and the `last-applied-configuration` annotation (embeds a JSON
+  copy of the spec, so every removed field would survive inside it). Status text
+  carries symptoms only, never root-cause detail — the real FailedGetScale message
+  names the missing target, which would plant the answer in a non-deciding field.
+  Extend via params/templates, never via a post-processing transform.
 - **saliency(field, scenario)** = `baseline_accuracy − reduced_accuracy`, each a fraction
   over k trials. High positive = the field carries signal (removing it hurts diagnosis);
   ~0 = noise (safe to drop). The heatmap is the `field × scenario` matrix.

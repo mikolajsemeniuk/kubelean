@@ -13,12 +13,12 @@ import (
 // ConfigMapRef and SecretRef are optional — left empty, the envFrom block is
 // omitted entirely.
 type DeploymentParams struct {
-	Name          string
-	Namespace     string
-	App           string // metadata.labels.app
-	Replicas      int
-	SelectorApp   string // spec.selector.matchLabels.app
-	PodApp        string // spec.template.metadata.labels.app
+	Name               string
+	Namespace          string
+	App                string // metadata.labels.app
+	Replicas           int
+	SelectorApp        string // spec.selector.matchLabels.app
+	PodApp             string // spec.template.metadata.labels.app
 	ContainerName      string
 	Image              string
 	ContainerPort      int
@@ -29,6 +29,8 @@ type DeploymentParams struct {
 	SecretRef          string // optional: envFrom secretRef name ("" omits it)
 	VolumeKind         string // optional: volume source — "pvc" | "configMap" | "secret"
 	VolumeRef          string // optional: the referenced name ("" omits the volume)
+	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
+	Status             string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
 
 //go:embed templates/deploy.yaml

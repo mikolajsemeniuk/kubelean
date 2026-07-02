@@ -1,10 +1,19 @@
 apiVersion: v1
 kind: Service
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   type: {{ .Type }}
   {{- if .Headless }}
@@ -19,3 +28,7 @@ spec:
       nodePort: {{ .NodePort }}
       {{- end }}
       protocol: TCP
+{{- if .Status }}
+status:
+  loadBalancer: {}
+{{- end }}

@@ -1,10 +1,22 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -12,3 +24,16 @@ spec:
     name: {{ .TargetName }}
   updatePolicy:
     updateMode: Auto
+{{- if eq .Status "healthy" }}
+status:
+  conditions:
+    - lastTransitionTime: "{{ .Created }}"
+      status: "True"
+      type: RecommendationProvided
+{{- else if eq .Status "failing" }}
+status:
+  conditions:
+    - lastTransitionTime: "{{ .Created }}"
+      status: "False"
+      type: RecommendationProvided
+{{- end }}

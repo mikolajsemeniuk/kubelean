@@ -1,10 +1,19 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   accessModes:
     - ReadWriteOnce
@@ -14,3 +23,14 @@ spec:
   resources:
     requests:
       storage: {{ .Storage }}
+{{- if eq .Status "healthy" }}
+status:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: {{ .Storage }}
+  phase: Bound
+{{- else if eq .Status "failing" }}
+status:
+  phase: Pending
+{{- end }}

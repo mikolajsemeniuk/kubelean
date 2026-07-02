@@ -9,9 +9,10 @@ import (
 // RoleParams are the values substituted into templates/role.yaml. A Role holds no
 // outgoing reference — it is the target a RoleBinding points at.
 type RoleParams struct {
-	Name      string
-	Namespace string
-	App       string
+	Name       string
+	Namespace  string
+	App        string
+	ServerMeta // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/role.yaml
@@ -33,6 +34,7 @@ type RoleBindingParams struct {
 	App                string
 	ServiceAccountName string // subjects[].name
 	RoleName           string // roleRef.name
+	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/rolebinding.yaml
@@ -48,8 +50,9 @@ func NewRoleBinding(p RoleBindingParams) string {
 // ClusterRoleParams are the values substituted into templates/clusterrole.yaml. A
 // ClusterRole is cluster-scoped and is the target of a ClusterRoleBinding's roleRef.
 type ClusterRoleParams struct {
-	Name string
-	App  string
+	Name       string
+	App        string
+	ServerMeta // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/clusterrole.yaml
@@ -72,6 +75,7 @@ type ClusterRoleBindingParams struct {
 	Namespace          string // subjects[].namespace (the SA's namespace)
 	ServiceAccountName string // subjects[].name
 	ClusterRoleName    string // roleRef.name
+	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
 }
 
 //go:embed templates/clusterrolebinding.yaml

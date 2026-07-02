@@ -1,10 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   replicas: {{ .Replicas }}
   selector:
@@ -12,6 +24,9 @@ spec:
       app: {{ .SelectorApp }}
   template:
     metadata:
+      {{- if .Created }}
+      creationTimestamp: null
+      {{- end }}
       labels:
         app: {{ .PodApp }}
     spec:
@@ -60,3 +75,31 @@ spec:
             secretName: {{ .VolumeRef }}
           {{- end }}
       {{- end }}
+{{- if eq .Status "healthy" }}
+status:
+  availableReplicas: {{ .Replicas }}
+  conditions:
+    - lastTransitionTime: "{{ .Created }}"
+      lastUpdateTime: "{{ .Created }}"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: {{ .Generation }}
+  readyReplicas: {{ .Replicas }}
+  replicas: {{ .Replicas }}
+  updatedReplicas: {{ .Replicas }}
+{{- else if eq .Status "failing" }}
+status:
+  conditions:
+    - lastTransitionTime: "{{ .Created }}"
+      lastUpdateTime: "{{ .Created }}"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: {{ .Generation }}
+  replicas: {{ .Replicas }}
+  unavailableReplicas: {{ .Replicas }}
+  updatedReplicas: {{ .Replicas }}
+{{- end }}
