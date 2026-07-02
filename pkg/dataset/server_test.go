@@ -96,6 +96,58 @@ func TestStatuses(t *testing.T) {
 	}
 }
 
+// TestTwins: every faulty scenario has exactly one healthy twin — same bundle,
+// anomaly fixed, expected NoFaultFound, no deciding fields, no failure symptom
+// left in any status.
+func TestTwins(t *testing.T) {
+	byName := map[string]Scenario{}
+	twins := 0
+	for _, s := range All() {
+		byName[s.Name] = s
+		if s.TwinOf != "" {
+			twins++
+		}
+	}
+
+	faulty := 0
+	for _, s := range All() {
+		if s.FaultClass == FaultNoFault {
+			continue
+		}
+		faulty++
+
+		tw, ok := byName[s.Name+"-twin"]
+		if !ok {
+			t.Errorf("%s: no twin in catalog", s.Name)
+			continue
+		}
+		if tw.TwinOf != s.Name {
+			t.Errorf("%s-twin: TwinOf = %q, want %q", s.Name, tw.TwinOf, s.Name)
+		}
+		if tw.FaultClass != FaultNoFault {
+			t.Errorf("%s-twin: FaultClass = %q, want NoFaultFound", s.Name, tw.FaultClass)
+		}
+		if len(tw.DecidingFields) != 0 {
+			t.Errorf("%s-twin: has deciding fields", s.Name)
+		}
+		if tw.Group != s.Group {
+			t.Errorf("%s-twin: group %q differs from %q", s.Name, tw.Group, s.Group)
+		}
+		if tw.YAML == s.YAML {
+			t.Errorf("%s-twin: YAML identical to the faulty scenario — anomaly not fixed", s.Name)
+		}
+		for _, symptom := range []string{"unavailableReplicas", "phase: Pending", `status: "False"`, "numberUnavailable"} {
+			if strings.Contains(tw.YAML, symptom) {
+				t.Errorf("%s-twin: still shows symptom %q", s.Name, symptom)
+			}
+		}
+	}
+
+	if twins != faulty {
+		t.Errorf("catalog has %d twins for %d faulty scenarios", twins, faulty)
+	}
+}
+
 // TestNoLeakingBlocks: managedFields and last-applied must never appear — both
 // would leak a removed field back into every ablation variant (see ServerMeta).
 func TestNoLeakingBlocks(t *testing.T) {

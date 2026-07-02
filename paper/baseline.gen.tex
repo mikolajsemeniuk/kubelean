@@ -5,9 +5,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-node-read
   labels:
     app: api
+  resourceVersion: "661120"
+  uid: 5ecd7f8a-6eec-45f9-a3be-40609d315b06
 subjects:
   - kind: ServiceAccount
     name: api-sa
@@ -20,9 +23,12 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: node-readers
   labels:
     app: api
+  resourceVersion: "531604"
+  uid: e6a0b733-6944-4ef7-a828-9277b629a14f
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -31,10 +37,13 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-sa
   namespace: production
   labels:
     app: api
+  resourceVersion: "469961"
+  uid: 54645a22-fb49-4fef-a63a-174389824a05
 automountServiceAccountToken: true
 \end{verbatim}
 
@@ -43,10 +52,14 @@ automountServiceAccountToken: true
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "375965"
+  uid: da64943b-5bfc-40c4-aa5e-c5f7d6f776d7
 spec:
   replicas: 2
   selector:
@@ -54,6 +67,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -67,12 +81,27 @@ spec:
                 name: api-config
             - secretRef:
                 name: api-secret
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-configs
   namespace: production
+  resourceVersion: "605340"
+  uid: 264acd9c-8700-4e71-a64e-5dc16a3e6b37
 data:
   LOG_LEVEL: info
   REGION: eu-west-1
@@ -80,12 +109,15 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-secret
   namespace: production
+  resourceVersion: "435786"
+  uid: c2a1fecc-dc79-4e95-a2f3-de1acef757b8
 type: Opaque
-stringData:
-  API_KEY: redacted-api-key
-  DB_PASSWORD: redacted-password
+data:
+  API_KEY: cmVkYWN0ZWQtYXBpLWtleQ==
+  DB_PASSWORD: cmVkYWN0ZWQtcGFzc3dvcmQ=
 \end{verbatim}
 
 % scenario: configmap-volume-wrong-name — fault: Ref_NotFound
@@ -93,10 +125,14 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "364255"
+  uid: 684f1f14-f07d-4970-a119-b198eb64379c
 spec:
   replicas: 2
   selector:
@@ -104,6 +140,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -119,12 +156,27 @@ spec:
         - name: data
           configMap:
             name: api-files
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-file
   namespace: production
+  resourceVersion: "391375"
+  uid: c534b5a0-3d0c-4730-aff7-8756bcf71a2e
 data:
   app.conf: level=info
 \end{verbatim}
@@ -134,16 +186,21 @@ data:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: agent
   namespace: production
   labels:
     app: agent
+  resourceVersion: "306140"
+  uid: d34cc84d-ef05-46c7-a721-d50e28b1e8f8
 spec:
   selector:
     matchLabels:
       app: agent
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: log-agent
     spec:
@@ -152,6 +209,14 @@ spec:
           image: fluent/fluent-bit:3.0.7
           ports:
             - containerPort: 2020
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberMisscheduled: 0
+  numberReady: 0
+  numberUnavailable: 3
+  observedGeneration: 1
+  updatedNumberScheduled: 3
 \end{verbatim}
 
 % scenario: healthy-bundle — fault: NoFaultFound
@@ -159,10 +224,14 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "415975"
+  uid: 0dba9035-6531-4d38-a875-84599bb99885
 spec:
   replicas: 2
   selector:
@@ -170,6 +239,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -183,12 +253,28 @@ spec:
                 name: api-config
             - secretRef:
                 name: api-secret
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-config
   namespace: production
+  resourceVersion: "398895"
+  uid: e756bd51-2da0-494e-adc0-013ed11c33ba
 data:
   LOG_LEVEL: info
   REGION: eu-west-1
@@ -196,12 +282,15 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-secret
   namespace: production
+  resourceVersion: "588790"
+  uid: 4f843458-ca1e-4c30-a2a7-ece4b440d163
 type: Opaque
-stringData:
-  API_KEY: redacted-api-key
-  DB_PASSWORD: redacted-password
+data:
+  API_KEY: cmVkYWN0ZWQtYXBpLWtleQ==
+  DB_PASSWORD: cmVkYWN0ZWQtcGFzc3dvcmQ=
 \end{verbatim}
 
 % scenario: hpa-target-wrong-name — fault: Ref_NotFound
@@ -209,10 +298,14 @@ stringData:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "164779"
+  uid: 447a28f5-5360-4ab3-a82b-e351676c6eb2
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -227,14 +320,27 @@ spec:
         target:
           type: Utilization
           averageUtilization: 80
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      message: the HPA controller was unable to get the target's current scale
+      reason: FailedGetScale
+      status: "False"
+      type: AbleToScale
+  currentReplicas: 0
+  desiredReplicas: 0
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api-server
   namespace: production
   labels:
     app: api
+  resourceVersion: "910222"
+  uid: 7a1c1454-6c27-4260-ae76-457ee5549e01
 spec:
   replicas: 2
   selector:
@@ -242,6 +348,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -250,6 +357,19 @@ spec:
           image: ghcr.io/acme/api:2.3.1
           ports:
             - containerPort: 8080
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
 \end{verbatim}
 
 % scenario: imagepull-secret-wrong-name — fault: Ref_NotFound
@@ -257,10 +377,14 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "993906"
+  uid: 241c3377-c6c1-4b8a-adc5-bd7b44c3804b
 spec:
   replicas: 2
   selector:
@@ -268,6 +392,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -278,15 +403,30 @@ spec:
           image: ghcr.io/acme/api:2.3.1
           ports:
             - containerPort: 8080
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: Secret
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: registry-cred
   namespace: production
+  resourceVersion: "703368"
+  uid: dfd4b5d5-74fd-4d93-a55d-a947f62d9c70
 type: Opaque
-stringData:
-  .dockerconfigjson: redacted-docker-config
+data:
+  .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
 \end{verbatim}
 
 % scenario: priorityclass-wrong-name — fault: Ref_NotFound
@@ -294,10 +434,14 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "533125"
+  uid: 0d5c514b-754f-4592-ae98-fec791ad64f3
 spec:
   replicas: 2
   selector:
@@ -305,6 +449,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -314,13 +459,28 @@ spec:
           image: ghcr.io/acme/api:2.3.1
           ports:
             - containerPort: 8080
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: high-priorities
   labels:
     app: api
+  resourceVersion: "186587"
+  uid: ab803b47-5580-4ffe-a95e-cc22c6ddeb92
 value: 1000000
 globalDefault: false
 description: critical API pods
@@ -331,10 +491,14 @@ description: critical API pods
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "883794"
+  uid: 6c0f7a1e-ae97-4bc9-a624-94f5e2bea039
 spec:
   replicas: 2
   selector:
@@ -342,6 +506,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -357,20 +522,41 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: api-data
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-datas
   namespace: production
   labels:
     app: api
+  resourceVersion: "380426"
+  uid: 47c968e0-b76d-4f85-a08e-e58cbd43b5d8
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
+status:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  phase: Bound
 \end{verbatim}
 
 % scenario: rolebinding-role-wrong-name — fault: Ref_NotFound
@@ -378,10 +564,13 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-read
   namespace: production
   labels:
     app: api
+  resourceVersion: "349902"
+  uid: 91b527ad-3120-41f7-a7d6-6a80dad3b594
 subjects:
   - kind: ServiceAccount
     name: api-sa
@@ -394,10 +583,13 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: pod-readers
   namespace: production
   labels:
     app: api
+  resourceVersion: "615617"
+  uid: 6d5f3e89-0a38-4c55-a448-81a702ab3f25
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -406,10 +598,13 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-sa
   namespace: production
   labels:
     app: api
+  resourceVersion: "338563"
+  uid: 6f6745bf-a31f-436d-ac1f-bc767edb29d8
 automountServiceAccountToken: true
 \end{verbatim}
 
@@ -418,10 +613,14 @@ automountServiceAccountToken: true
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "152839"
+  uid: 5e2ef0e0-0946-4787-a5cc-dc0a2531bc43
 spec:
   replicas: 2
   selector:
@@ -429,6 +628,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -442,12 +642,27 @@ spec:
                 name: api-config
             - secretRef:
                 name: api-secret
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-config
   namespace: production
+  resourceVersion: "228326"
+  uid: aa6a9647-4517-4529-a6d9-73e1c5d4da0a
 data:
   LOG_LEVEL: info
   REGION: eu-west-1
@@ -455,12 +670,15 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-secrets
   namespace: production
+  resourceVersion: "228481"
+  uid: dc55e19e-1e43-4e98-aa4a-78d86ea73f6b
 type: Opaque
-stringData:
-  API_KEY: redacted-api-key
-  DB_PASSWORD: redacted-password
+data:
+  API_KEY: cmVkYWN0ZWQtYXBpLWtleQ==
+  DB_PASSWORD: cmVkYWN0ZWQtcGFzc3dvcmQ=
 \end{verbatim}
 
 % scenario: secret-volume-wrong-name — fault: Ref_NotFound
@@ -468,10 +686,14 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "313324"
+  uid: 0283c6bf-adad-403a-a2ea-345f6ed2a76a
 spec:
   replicas: 2
   selector:
@@ -479,6 +701,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -494,16 +717,31 @@ spec:
         - name: data
           secret:
             secretName: api-certs
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: Secret
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-cert
   namespace: production
+  resourceVersion: "275846"
+  uid: ce0f4418-e6c8-4394-a7a3-24f4b0f42f21
 type: Opaque
-stringData:
-  tls.crt: redacted-cert
-  tls.key: redacted-key
+data:
+  tls.crt: cmVkYWN0ZWQtY2VydA==
+  tls.key: cmVkYWN0ZWQta2V5
 \end{verbatim}
 
 % scenario: selector-label-mismatch — fault: SelectorMismatch
@@ -511,10 +749,14 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: web
   namespace: production
   labels:
     app: web
+  resourceVersion: "825289"
+  uid: 18f0da56-db3c-43bf-a378-f3fb0f06c6a5
 spec:
   replicas: 3
   selector:
@@ -522,6 +764,7 @@ spec:
       app: web
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: web-frontend
     spec:
@@ -530,6 +773,18 @@ spec:
           image: nginx:1.25
           ports:
             - containerPort: 80
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 3
+  unavailableReplicas: 3
+  updatedReplicas: 3
 \end{verbatim}
 
 % scenario: service-port-mismatch — fault: PortMismatch
@@ -537,10 +792,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: checkout
   namespace: production
   labels:
     app: checkout
+  resourceVersion: "539940"
+  uid: ac90a999-0245-4a18-afbf-0a3faee73512
 spec:
   type: ClusterIP
   selector:
@@ -549,14 +807,20 @@ spec:
     - port: 8080
       targetPort: 9090
       protocol: TCP
+status:
+  loadBalancer: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: checkout
   namespace: production
   labels:
     app: checkout
+  resourceVersion: "783851"
+  uid: 9c99aea1-48a8-461e-aa79-348a1c0106d2
 spec:
   replicas: 2
   selector:
@@ -564,6 +828,7 @@ spec:
       app: checkout
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: checkout
     spec:
@@ -572,6 +837,19 @@ spec:
           image: ghcr.io/acme/checkout:1.4.0
           ports:
             - containerPort: 8080
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
 \end{verbatim}
 
 % scenario: service-selector-mismatch — fault: SelectorMismatch
@@ -579,10 +857,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: web
   namespace: production
   labels:
     app: web
+  resourceVersion: "490059"
+  uid: bec0ae58-98c3-45b2-a889-b30bda34dcfb
 spec:
   type: ClusterIP
   selector:
@@ -591,14 +872,20 @@ spec:
     - port: 8080
       targetPort: 8080
       protocol: TCP
+status:
+  loadBalancer: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: web
   namespace: production
   labels:
     app: web
+  resourceVersion: "131895"
+  uid: cf28050f-91c9-430e-ae30-fbdc82e0f669
 spec:
   replicas: 3
   selector:
@@ -606,6 +893,7 @@ spec:
       app: web
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: web
     spec:
@@ -614,6 +902,19 @@ spec:
           image: nginx:1.25
           ports:
             - containerPort: 8080
+status:
+  availableReplicas: 3
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 3
+  replicas: 3
+  updatedReplicas: 3
 \end{verbatim}
 
 % scenario: serviceaccount-wrong-name — fault: Ref_NotFound
@@ -621,10 +922,14 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "683480"
+  uid: 38b0342f-5926-41c5-a94a-6a8a0d75b137
 spec:
   replicas: 2
   selector:
@@ -632,6 +937,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -641,14 +947,29 @@ spec:
           image: ghcr.io/acme/api:2.3.1
           ports:
             - containerPort: 8080
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-runners
   namespace: production
   labels:
     app: api
+  resourceVersion: "408953"
+  uid: 18781033-649a-4489-a0ec-9ab31ac2f09d
 automountServiceAccountToken: true
 \end{verbatim}
 
@@ -657,10 +978,14 @@ automountServiceAccountToken: true
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: db
   namespace: production
   labels:
     app: db
+  resourceVersion: "531795"
+  uid: 2fa8047b-869d-4724-a70d-71337826cfd5
 spec:
   serviceName: db
   replicas: 3
@@ -669,6 +994,7 @@ spec:
       app: db
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: database
     spec:
@@ -677,6 +1003,16 @@ spec:
           image: postgres:16.2
           ports:
             - containerPort: 5432
+status:
+  availableReplicas: 0
+  collisionCount: 0
+  currentReplicas: 3
+  currentRevision: db-6d8f9c7b4
+  observedGeneration: 1
+  readyReplicas: 0
+  replicas: 3
+  updateRevision: db-6d8f9c7b4
+  updatedReplicas: 3
 \end{verbatim}
 
 % scenario: storageclass-wrong-name — fault: Ref_NotFound
@@ -684,10 +1020,13 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: api-data
   namespace: production
   labels:
     app: api
+  resourceVersion: "193082"
+  uid: e3da9fde-3e4c-4573-ad94-eab4f9c2645f
 spec:
   accessModes:
     - ReadWriteOnce
@@ -695,13 +1034,18 @@ spec:
   resources:
     requests:
       storage: 10Gi
+status:
+  phase: Pending
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
   name: fast-ssds
   labels:
     app: api
+  resourceVersion: "666583"
+  uid: fd64cf11-c8ac-4a73-ae4f-b3a8d86e1caa
 provisioner: ebs.csi.aws.com
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
@@ -712,10 +1056,14 @@ volumeBindingMode: WaitForFirstConsumer
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api
   namespace: production
   labels:
     app: api
+  resourceVersion: "312595"
+  uid: 8fc184fa-3829-4b90-adc1-19acca6c9528
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -723,14 +1071,23 @@ spec:
     name: api
   updatePolicy:
     updateMode: Auto
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      status: "False"
+      type: RecommendationProvided
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
   name: api-server
   namespace: production
   labels:
     app: api
+  resourceVersion: "803902"
+  uid: a678d32f-eb25-442e-a0c2-9acdebf50b49
 spec:
   replicas: 2
   selector:
@@ -738,6 +1095,7 @@ spec:
       app: api
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: api
     spec:
@@ -746,5 +1104,18 @@ spec:
           image: ghcr.io/acme/api:2.3.1
           ports:
             - containerPort: 8080
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
 \end{verbatim}
 

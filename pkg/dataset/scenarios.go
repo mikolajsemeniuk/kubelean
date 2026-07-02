@@ -26,6 +26,7 @@ type Scenario struct {
 	FaultClass     string          // ground-truth label
 	DecidingFields []DecidingField // fault loci, Kind-qualified; encode the fault
 	YAML           string          // rendered manifest(s); multi-document scenarios are --- joined
+	TwinOf         string          // set on a healthy twin: the faulty scenario it mirrors; twins run baseline-only
 }
 
 // DecidingField is a ground-truth fault locus: the field whose value encodes the
@@ -39,30 +40,58 @@ type DecidingField struct {
 	Path string
 }
 
-// All returns the whole m1 fault catalog, across groups.
+// All returns the whole m1 catalog: every faulty scenario, its healthy twin,
+// and the standalone healthy control.
 func All() []Scenario {
-	return []Scenario{
-		selectorLabelMismatch(),
-		statefulSetSelectorMismatch(),
-		daemonSetSelectorMismatch(),
-		replicaSetSelectorMismatch(),
-		secretWrongName(),
-		configMapRefWrongName(),
-		serviceAccountWrongName(),
-		imagePullSecretWrongName(),
-		pvcClaimWrongName(),
-		configMapVolumeWrongName(),
-		secretVolumeWrongName(),
-		storageClassWrongName(),
-		hpaTargetWrongName(),
-		vpaTargetWrongName(),
-		priorityClassWrongName(),
-		roleBindingRoleWrongName(),
-		clusterRoleBindingRoleWrongName(),
-		serviceSelectorMismatch(),
-		servicePortMismatch(),
-		healthyBundle(),
+	builders := []func(twin bool) Scenario{
+		selectorLabelMismatch,
+		statefulSetSelectorMismatch,
+		daemonSetSelectorMismatch,
+		replicaSetSelectorMismatch,
+		secretWrongName,
+		configMapRefWrongName,
+		serviceAccountWrongName,
+		imagePullSecretWrongName,
+		pvcClaimWrongName,
+		configMapVolumeWrongName,
+		secretVolumeWrongName,
+		storageClassWrongName,
+		hpaTargetWrongName,
+		vpaTargetWrongName,
+		priorityClassWrongName,
+		roleBindingRoleWrongName,
+		clusterRoleBindingRoleWrongName,
+		serviceSelectorMismatch,
+		servicePortMismatch,
 	}
+
+	var out []Scenario
+	for _, build := range builders {
+		out = append(out, build(false), build(true))
+	}
+
+	return append(out, healthyBundle())
+}
+
+// maybeTwin returns s unchanged, or converts it into its healthy twin: the
+// same bundle with the single anomaly fixed (the caller flips the divergent
+// value and the sick status), renamed <name>-twin, expected NoFaultFound, no
+// deciding fields. Twins measure the per-scenario false-positive rate: whether
+// the model actually discriminates the fault from the healthy shape, or just
+// always suspects it on this bundle (lesson 1) — in which case the faulty
+// baseline is bias, not diagnosis. The producer runs twins baseline-only:
+// with no fault there is no saliency to measure. Twins reuse the faulty
+// scenario's uid/resourceVersion literals; the two never share a prompt.
+func maybeTwin(twin bool, s Scenario) Scenario {
+	if !twin {
+		return s
+	}
+	s.TwinOf = s.Name
+	s.Name += "-twin"
+	s.FaultClass = FaultNoFault
+	s.DecidingFields = nil
+
+	return s
 }
 
 // Scenarios returns the catalog filtered to one group.
@@ -86,19 +115,24 @@ func Scenarios(group string) []Scenario {
 // ("selector does not match template labels"), so their failing status is an
 // as-if — they model the pre-apply review case, kept in kubectl-get shape so
 // every scenario's field population is comparable.
-func selectorLabelMismatch() Scenario {
+func selectorLabelMismatch(twin bool) Scenario {
+	podApp, status := "web-frontend", StatusFailing
+	if twin {
+		podApp, status = "web", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:          "web",
 		Namespace:     "production",
 		App:           "web",
 		Replicas:      3,
 		SelectorApp:   "web",
-		PodApp:        "web-frontend",
+		PodApp:        podApp,
 		ContainerName: "web",
 		Image:         "nginx:1.25",
 		ContainerPort: 80,
 		ServerMeta:    srv("18f0da56-db3c-43bf-a378-f3fb0f06c6a5", "825289"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
 	out := Scenario{
@@ -112,29 +146,34 @@ func selectorLabelMismatch() Scenario {
 		YAML: joinDocs(dep),
 	}
 
-	return out
+	return maybeTwin(twin, out)
 }
 
 // statefulSetSelectorMismatch is a single StatefulSet whose pod template labels
 // (app=database) do not match its own selector (app=db) — the same SelectorMismatch
 // root cause as the Deployment case, on a second workload Kind, within one
 // document (so the 7B handles it, unlike the cross-document Service case).
-func statefulSetSelectorMismatch() Scenario {
+func statefulSetSelectorMismatch(twin bool) Scenario {
+	podApp, status := "database", StatusFailing
+	if twin {
+		podApp, status = "db", StatusHealthy
+	}
+
 	sts := NewStatefulSet(StatefulSetParams{
 		Name:          "db",
 		Namespace:     "production",
 		App:           "db",
 		Replicas:      3,
 		SelectorApp:   "db",
-		PodApp:        "database",
+		PodApp:        podApp,
 		ContainerName: "db",
 		Image:         "postgres:16.2",
 		ContainerPort: 5432,
 		ServerMeta:    srv("2fa8047b-869d-4724-a70d-71337826cfd5", "531795"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "statefulset-selector-mismatch",
 		Group:      GroupSelector,
 		FaultClass: FaultSelectorMismatch,
@@ -143,27 +182,32 @@ func statefulSetSelectorMismatch() Scenario {
 			{Kind: "StatefulSet", Path: "spec.template.metadata.labels.app"},
 		},
 		YAML: joinDocs(sts),
-	}
+	})
 }
 
 // daemonSetSelectorMismatch is a DaemonSet whose pod template labels (app=log-agent)
 // do not match its selector (app=agent) — SelectorMismatch on a third workload Kind,
 // single-document, so the 7B handles it.
-func daemonSetSelectorMismatch() Scenario {
+func daemonSetSelectorMismatch(twin bool) Scenario {
+	podApp, status := "log-agent", StatusFailing
+	if twin {
+		podApp, status = "agent", StatusHealthy
+	}
+
 	ds := NewDaemonSet(DaemonSetParams{
 		Name:          "agent",
 		Namespace:     "production",
 		App:           "agent",
 		SelectorApp:   "agent",
-		PodApp:        "log-agent",
+		PodApp:        podApp,
 		ContainerName: "agent",
 		Image:         "fluent/fluent-bit:3.0.7",
 		ContainerPort: 2020,
 		ServerMeta:    srv("d34cc84d-ef05-46c7-a721-d50e28b1e8f8", "306140"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "daemonset-selector-mismatch",
 		Group:      GroupSelector,
 		FaultClass: FaultSelectorMismatch,
@@ -172,13 +216,18 @@ func daemonSetSelectorMismatch() Scenario {
 			{Kind: "DaemonSet", Path: "spec.template.metadata.labels.app"},
 		},
 		YAML: joinDocs(ds),
-	}
+	})
 }
 
 // pvcClaimWrongName is a Deployment mounting a volume backed by PVC "api-data",
 // but the only PersistentVolumeClaim is named "api-datas" — a dangling claim
 // (Pending pod in a real cluster). Ref_NotFound.
-func pvcClaimWrongName() Scenario {
+func pvcClaimWrongName(twin bool) Scenario {
+	pvcName, status := "api-datas", StatusFailing
+	if twin {
+		pvcName, status = "api-data", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:          "api",
 		Namespace:     "production",
@@ -192,18 +241,18 @@ func pvcClaimWrongName() Scenario {
 		VolumeKind:    "pvc",
 		VolumeRef:     "api-data",
 		ServerMeta:    srv("6c0f7a1e-ae97-4bc9-a624-94f5e2bea039", "883794"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
 	// The mis-named claim itself is a healthy, Bound PVC — it is simply not the
 	// one the Deployment asks for.
 	pvc := NewPVC(PVCParams{
-		Name: "api-datas", Namespace: "production", App: "api", Storage: "10Gi",
+		Name: pvcName, Namespace: "production", App: "api", Storage: "10Gi",
 		ServerMeta: srv("47c968e0-b76d-4f85-a08e-e58cbd43b5d8", "380426"),
 		Status:     StatusHealthy,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "pvc-claim-wrong-name",
 		Group:      GroupVolumes,
 		FaultClass: FaultRefNotFound,
@@ -212,14 +261,19 @@ func pvcClaimWrongName() Scenario {
 			{Kind: "PersistentVolumeClaim", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, pvc),
-	}
+	})
 }
 
 // configMapVolumeWrongName is a Deployment mounting ConfigMap "api-files" as a
 // volume, but the ConfigMap is named "api-file" — same Ref_NotFound, a different
 // reference site (volume source, not envFrom) so configMap.name and configMapRef
 // .name are distinct field-keys with their own cross-scenario profiles.
-func configMapVolumeWrongName() Scenario {
+func configMapVolumeWrongName(twin bool) Scenario {
+	cmName, status := "api-file", StatusFailing
+	if twin {
+		cmName, status = "api-files", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:          "api",
 		Namespace:     "production",
@@ -233,16 +287,16 @@ func configMapVolumeWrongName() Scenario {
 		VolumeKind:    "configMap",
 		VolumeRef:     "api-files",
 		ServerMeta:    srv("684f1f14-f07d-4970-a119-b198eb64379c", "364255"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
-		Name: "api-file", Namespace: "production",
+		Name: cmName, Namespace: "production",
 		Data:       map[string]string{"app.conf": "level=info"},
 		ServerMeta: srv("c534b5a0-3d0c-4730-aff7-8756bcf71a2e", "391375"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "configmap-volume-wrong-name",
 		Group:      GroupVolumes,
 		FaultClass: FaultRefNotFound,
@@ -251,12 +305,17 @@ func configMapVolumeWrongName() Scenario {
 			{Kind: "ConfigMap", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, cm),
-	}
+	})
 }
 
 // secretVolumeWrongName is a Deployment mounting Secret "api-certs" as a volume,
 // but the Secret is named "api-cert" — Ref_NotFound at the secret volume source.
-func secretVolumeWrongName() Scenario {
+func secretVolumeWrongName(twin bool) Scenario {
+	secretName, status := "api-cert", StatusFailing
+	if twin {
+		secretName, status = "api-certs", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:          "api",
 		Namespace:     "production",
@@ -270,16 +329,16 @@ func secretVolumeWrongName() Scenario {
 		VolumeKind:    "secret",
 		VolumeRef:     "api-certs",
 		ServerMeta:    srv("0283c6bf-adad-403a-a2ea-345f6ed2a76a", "313324"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
 	sec := NewSecret(SecretParams{
-		Name: "api-cert", Namespace: "production",
+		Name: secretName, Namespace: "production",
 		StringData: map[string]string{"tls.crt": "redacted-cert", "tls.key": "redacted-key"},
 		ServerMeta: srv("ce0f4418-e6c8-4394-a7a3-24f4b0f42f21", "275846"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "secret-volume-wrong-name",
 		Group:      GroupVolumes,
 		FaultClass: FaultRefNotFound,
@@ -288,14 +347,19 @@ func secretVolumeWrongName() Scenario {
 			{Kind: "Secret", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, sec),
-	}
+	})
 }
 
 // imagePullSecretWrongName is a Deployment whose pods reference image pull secret
 // "registry-creds", but the only Secret in the bundle is named "registry-cred" —
 // a dangling reference (ImagePullBackOff in a real cluster). Ref_NotFound, a fourth
 // reference kind on the cross-scenario profile.
-func imagePullSecretWrongName() Scenario {
+func imagePullSecretWrongName(twin bool) Scenario {
+	secretName, status := "registry-cred", StatusFailing
+	if twin {
+		secretName, status = "registry-creds", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:            "api",
 		Namespace:       "production",
@@ -308,17 +372,17 @@ func imagePullSecretWrongName() Scenario {
 		ContainerPort:   8080,
 		ImagePullSecret: "registry-creds",
 		ServerMeta:      srv("241c3377-c6c1-4b8a-adc5-bd7b44c3804b", "993906"),
-		Status:          StatusFailing,
+		Status:          status,
 	})
 
 	sec := NewSecret(SecretParams{
-		Name:       "registry-cred",
+		Name:       secretName,
 		Namespace:  "production",
 		StringData: map[string]string{".dockerconfigjson": "redacted-docker-config"},
 		ServerMeta: srv("dfd4b5d5-74fd-4d93-a55d-a947f62d9c70", "703368"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "imagepull-secret-wrong-name",
 		Group:      GroupReferences,
 		FaultClass: FaultRefNotFound,
@@ -327,14 +391,19 @@ func imagePullSecretWrongName() Scenario {
 			{Kind: "Secret", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, sec),
-	}
+	})
 }
 
 // secretWrongName is a Deployment wired to a ConfigMap (correct — a healthy
 // distractor) and a Secret (broken): the Deployment references secret
 // "api-secret" but the Secret is actually named "api-secrets". The symmetric
 // cm-wrong-name variant would instead break ConfigMapRef against the ConfigMap.
-func secretWrongName() Scenario {
+func secretWrongName(twin bool) Scenario {
+	secretName, status := "api-secrets", StatusFailing
+	if twin {
+		secretName, status = "api-secret", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:          "api",
 		Namespace:     "production",
@@ -348,7 +417,7 @@ func secretWrongName() Scenario {
 		ConfigMapRef:  "api-config",
 		SecretRef:     "api-secret",
 		ServerMeta:    srv("5e2ef0e0-0946-4787-a5cc-dc0a2531bc43", "152839"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
@@ -358,7 +427,7 @@ func secretWrongName() Scenario {
 	})
 
 	sec := NewSecret(SecretParams{
-		Name:       "api-secrets",
+		Name:       secretName,
 		Namespace:  "production",
 		StringData: map[string]string{"API_KEY": "redacted-api-key", "DB_PASSWORD": "redacted-password"},
 		ServerMeta: srv("dc55e19e-1e43-4e98-aa4a-78d86ea73f6b", "228481"),
@@ -375,7 +444,7 @@ func secretWrongName() Scenario {
 		YAML: joinDocs(dep, cm, sec),
 	}
 
-	return out
+	return maybeTwin(twin, out)
 }
 
 // configMapRefWrongName mirrors secretWrongName with the fault on the ConfigMap
@@ -384,7 +453,12 @@ func secretWrongName() Scenario {
 // Same Ref_NotFound class, different deciding field — this is what gives
 // configMapRef.name a cross-scenario profile (noise in secret-ref-wrong-name,
 // deciding here).
-func configMapRefWrongName() Scenario {
+func configMapRefWrongName(twin bool) Scenario {
+	cmName, status := "api-configs", StatusFailing
+	if twin {
+		cmName, status = "api-config", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:          "api",
 		Namespace:     "production",
@@ -398,11 +472,11 @@ func configMapRefWrongName() Scenario {
 		ConfigMapRef:  "api-config",
 		SecretRef:     "api-secret",
 		ServerMeta:    srv("da64943b-5bfc-40c4-aa5e-c5f7d6f776d7", "375965"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
 	cm := NewConfigmap(ConfigmapParams{
-		Name: "api-configs", Namespace: "production",
+		Name: cmName, Namespace: "production",
 		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
 		ServerMeta: srv("264acd9c-8700-4e71-a64e-5dc16a3e6b37", "605340"),
 	})
@@ -414,7 +488,7 @@ func configMapRefWrongName() Scenario {
 		ServerMeta: srv("c2a1fecc-dc79-4e95-a2f3-de1acef757b8", "435786"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "configmap-ref-wrong-name",
 		Group:      GroupReferences,
 		FaultClass: FaultRefNotFound,
@@ -423,7 +497,7 @@ func configMapRefWrongName() Scenario {
 			{Kind: "ConfigMap", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, cm, sec),
-	}
+	})
 }
 
 // serviceSelectorMismatch is a healthy Deployment plus a Service whose selector
@@ -431,10 +505,15 @@ func configMapRefWrongName() Scenario {
 // Service has no endpoints. The Deployment is internally consistent — the fault
 // is purely the Service selector against the pod labels, so both are deciding.
 // Same SelectorMismatch root cause as the Deployment case, on a different Kind.
-func serviceSelectorMismatch() Scenario {
-	// Both statuses are healthy: the Deployment's pods run fine, and a Service
-	// carries no endpoint symptom in its own status — the emptiness lives in
-	// Endpoints objects, which are not part of the bundle.
+func serviceSelectorMismatch(twin bool) Scenario {
+	selectorApp := "storefront" // no pod carries app=storefront
+	if twin {
+		selectorApp = "web"
+	}
+
+	// Both statuses are healthy even in the faulty case: the Deployment's pods
+	// run fine, and a Service carries no endpoint symptom in its own status —
+	// the emptiness lives in Endpoints objects, which are not part of the bundle.
 	dep := NewDeployment(DeploymentParams{
 		Name:          "web",
 		Namespace:     "production",
@@ -453,7 +532,7 @@ func serviceSelectorMismatch() Scenario {
 		Name:        "web",
 		Namespace:   "production",
 		App:         "web",
-		SelectorApp: "storefront", // no pod carries app=storefront
+		SelectorApp: selectorApp,
 		// port == targetPort == containerPort: ports are fully healthy, so the only
 		// anomaly is the selector. A 7B conflates port with targetPort, so an
 		// unequal port would read as a spurious PortMismatch and mask the selector.
@@ -463,7 +542,7 @@ func serviceSelectorMismatch() Scenario {
 		Status:     StatusHealthy,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "service-selector-mismatch",
 		Group:      GroupNetworking,
 		FaultClass: FaultSelectorMismatch,
@@ -472,7 +551,7 @@ func serviceSelectorMismatch() Scenario {
 			{Kind: "Deployment", Path: "spec.template.metadata.labels.app"},
 		},
 		YAML: joinDocs(svc, dep),
-	}
+	})
 }
 
 // servicePortMismatch is a healthy Deployment plus a Service whose selector
@@ -480,9 +559,15 @@ func serviceSelectorMismatch() Scenario {
 // match the container's containerPort (8080) — traffic reaches a port nothing
 // listens on. Selector and labels are consistent; the fault is targetPort vs
 // containerPort, so both are deciding.
-func servicePortMismatch() Scenario {
-	// Both statuses are healthy: pods are ready and the Service exists; the
-	// symptom (refused connections) only shows at traffic time, not in status.
+func servicePortMismatch(twin bool) Scenario {
+	targetPort := 9090 // pods listen on 8080
+	if twin {
+		targetPort = 8080
+	}
+
+	// Both statuses are healthy even in the faulty case: pods are ready and the
+	// Service exists; the symptom (refused connections) only shows at traffic
+	// time, not in status.
 	dep := NewDeployment(DeploymentParams{
 		Name:          "checkout",
 		Namespace:     "production",
@@ -505,12 +590,12 @@ func servicePortMismatch() Scenario {
 		// port == containerPort (8080), so the ONLY anomalous value is targetPort:
 		// removing it must restore a fully healthy manifest for the flip to hold.
 		Port:       8080,
-		TargetPort: 9090, // pods listen on 8080
+		TargetPort: targetPort,
 		ServerMeta: srv("ac90a999-0245-4a18-afbf-0a3faee73512", "539940"),
 		Status:     StatusHealthy,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "service-port-mismatch",
 		Group:      GroupNetworking,
 		FaultClass: FaultPortMismatch,
@@ -519,7 +604,7 @@ func servicePortMismatch() Scenario {
 			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort"},
 		},
 		YAML: joinDocs(svc, dep),
-	}
+	})
 }
 
 // serviceAccountWrongName is a Deployment whose pods run as serviceAccount
@@ -527,7 +612,12 @@ func servicePortMismatch() Scenario {
 // — a dangling reference. Same Ref_NotFound class as the secret/configmap cases,
 // a third reference kind, so serviceAccountName joins the cross-scenario profile
 // (deciding here, noise wherever a serviceAccount is not the fault).
-func serviceAccountWrongName() Scenario {
+func serviceAccountWrongName(twin bool) Scenario {
+	saName, status := "api-runners", StatusFailing
+	if twin {
+		saName, status = "api-runner", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name:               "api",
 		Namespace:          "production",
@@ -540,15 +630,15 @@ func serviceAccountWrongName() Scenario {
 		ContainerPort:      8080,
 		ServiceAccountName: "api-runner",
 		ServerMeta:         srv("38b0342f-5926-41c5-a94a-6a8a0d75b137", "683480"),
-		Status:             StatusFailing,
+		Status:             status,
 	})
 
 	sa := NewServiceAccount(ServiceAccountParams{
-		Name: "api-runners", Namespace: "production", App: "api",
+		Name: saName, Namespace: "production", App: "api",
 		ServerMeta: srv("18781033-649a-4489-a0ec-9ab31ac2f09d", "408953"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "serviceaccount-wrong-name",
 		Group:      GroupReferences,
 		FaultClass: FaultRefNotFound,
@@ -557,28 +647,33 @@ func serviceAccountWrongName() Scenario {
 			{Kind: "ServiceAccount", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, sa),
-	}
+	})
 }
 
 // replicaSetSelectorMismatch is a single ReplicaSet whose pod template labels
 // (app=web-frontend) do not match its selector (app=web) — SelectorMismatch on a
 // fourth workload Kind, single document.
-func replicaSetSelectorMismatch() Scenario {
+func replicaSetSelectorMismatch(twin bool) Scenario {
+	podApp, status := "web-frontend", StatusFailing
+	if twin {
+		podApp, status = "web", StatusHealthy
+	}
+
 	rs := NewReplicaSet(ReplicaSetParams{
 		Name:          "web",
 		Namespace:     "production",
 		App:           "web",
 		Replicas:      3,
 		SelectorApp:   "web",
-		PodApp:        "web-frontend",
+		PodApp:        podApp,
 		ContainerName: "web",
 		Image:         "nginx:1.25",
 		ContainerPort: 8080,
 		ServerMeta:    srv("0b7bbad4-d218-4413-a6f6-1fbdebd23bea", "615340"),
-		Status:        StatusFailing,
+		Status:        status,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "replicaset-selector-mismatch",
 		Group:      GroupSelector,
 		FaultClass: FaultSelectorMismatch,
@@ -587,25 +682,30 @@ func replicaSetSelectorMismatch() Scenario {
 			{Kind: "ReplicaSet", Path: "spec.template.metadata.labels.app"},
 		},
 		YAML: joinDocs(rs),
-	}
+	})
 }
 
 // storageClassWrongName is a PVC requesting storageClass "fast-ssd", but the only
 // StorageClass is named "fast-ssds" — the claim stays Pending. Ref_NotFound.
-func storageClassWrongName() Scenario {
+func storageClassWrongName(twin bool) Scenario {
+	scName, status := "fast-ssds", StatusFailing // faulty: the claim stays Pending
+	if twin {
+		scName, status = "fast-ssd", StatusHealthy
+	}
+
 	pvc := NewPVC(PVCParams{
 		Name: "api-data", Namespace: "production", App: "api",
 		Storage: "10Gi", StorageClass: "fast-ssd",
 		ServerMeta: srv("e3da9fde-3e4c-4573-ad94-eab4f9c2645f", "193082"),
-		Status:     StatusFailing, // the claim stays Pending
+		Status:     status,
 	})
 
 	sc := NewStorageClass(StorageClassParams{
-		Name: "fast-ssds", App: "api", Provisioner: "ebs.csi.aws.com",
+		Name: scName, App: "api", Provisioner: "ebs.csi.aws.com",
 		ServerMeta: srv("fd64cf11-c8ac-4a73-ae4f-b3a8d86e1caa", "666583"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "storageclass-wrong-name",
 		Group:      GroupVolumes,
 		FaultClass: FaultRefNotFound,
@@ -614,12 +714,17 @@ func storageClassWrongName() Scenario {
 			{Kind: "StorageClass", Path: "metadata.name"},
 		},
 		YAML: joinDocs(pvc, sc),
-	}
+	})
 }
 
 // hpaTargetWrongName is an HPA scaling scaleTargetRef "api", but the Deployment is
 // named "api-server" — the HPA targets nothing. Ref_NotFound.
-func hpaTargetWrongName() Scenario {
+func hpaTargetWrongName(twin bool) Scenario {
+	targetName, status := "api", StatusFailing
+	if twin {
+		targetName, status = "api-server", StatusHealthy
+	}
+
 	// The Deployment itself is healthy — only the HPA dangles, so only its
 	// status is failing. Its condition text stays symptom-only: the real
 	// FailedGetScale message names the missing target, which would plant the
@@ -634,12 +739,12 @@ func hpaTargetWrongName() Scenario {
 
 	hpa := NewHPA(HPAParams{
 		Name: "api", Namespace: "production", App: "api",
-		TargetKind: "Deployment", TargetName: "api", MinReplicas: 2, MaxReplicas: 10,
+		TargetKind: "Deployment", TargetName: targetName, MinReplicas: 2, MaxReplicas: 10,
 		ServerMeta: srv("447a28f5-5360-4ab3-a82b-e351676c6eb2", "164779"),
-		Status:     StatusFailing,
+		Status:     status,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "hpa-target-wrong-name",
 		Group:      GroupScaling,
 		FaultClass: FaultRefNotFound,
@@ -648,12 +753,17 @@ func hpaTargetWrongName() Scenario {
 			{Kind: "Deployment", Path: "metadata.name"},
 		},
 		YAML: joinDocs(hpa, dep),
-	}
+	})
 }
 
 // vpaTargetWrongName is a VPA right-sizing targetRef "api", but the Deployment is
 // named "api-server" — the VPA targets nothing. Ref_NotFound.
-func vpaTargetWrongName() Scenario {
+func vpaTargetWrongName(twin bool) Scenario {
+	targetName, status := "api", StatusFailing
+	if twin {
+		targetName, status = "api-server", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name: "api-server", Namespace: "production", App: "api",
 		Replicas: 2, SelectorApp: "api", PodApp: "api",
@@ -664,12 +774,12 @@ func vpaTargetWrongName() Scenario {
 
 	vpa := NewVPA(VPAParams{
 		Name: "api", Namespace: "production", App: "api",
-		TargetKind: "Deployment", TargetName: "api",
+		TargetKind: "Deployment", TargetName: targetName,
 		ServerMeta: srv("8fc184fa-3829-4b90-adc1-19acca6c9528", "312595"),
-		Status:     StatusFailing,
+		Status:     status,
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "vpa-target-wrong-name",
 		Group:      GroupScaling,
 		FaultClass: FaultRefNotFound,
@@ -678,28 +788,33 @@ func vpaTargetWrongName() Scenario {
 			{Kind: "Deployment", Path: "metadata.name"},
 		},
 		YAML: joinDocs(vpa, dep),
-	}
+	})
 }
 
 // priorityClassWrongName is a Deployment whose pods request priorityClass
 // "high-priority", but the only PriorityClass is named "high-priorities" — the pods
 // are rejected by admission. Ref_NotFound.
-func priorityClassWrongName() Scenario {
+func priorityClassWrongName(twin bool) Scenario {
+	pcName, status := "high-priorities", StatusFailing
+	if twin {
+		pcName, status = "high-priority", StatusHealthy
+	}
+
 	dep := NewDeployment(DeploymentParams{
 		Name: "api", Namespace: "production", App: "api",
 		Replicas: 2, SelectorApp: "api", PodApp: "api",
 		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
 		PriorityClassName: "high-priority",
 		ServerMeta:        srv("0d5c514b-754f-4592-ae98-fec791ad64f3", "533125"),
-		Status:            StatusFailing,
+		Status:            status,
 	})
 
 	pc := NewPriorityClass(PriorityClassParams{
-		Name: "high-priorities", App: "api", Value: 1000000, Description: "critical API pods",
+		Name: pcName, App: "api", Value: 1000000, Description: "critical API pods",
 		ServerMeta: srv("ab803b47-5580-4ffe-a95e-cc22c6ddeb92", "186587"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "priorityclass-wrong-name",
 		Group:      GroupScaling,
 		FaultClass: FaultRefNotFound,
@@ -708,13 +823,18 @@ func priorityClassWrongName() Scenario {
 			{Kind: "PriorityClass", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, pc),
-	}
+	})
 }
 
 // roleBindingRoleWrongName is a RoleBinding granting role "pod-reader" to a
 // ServiceAccount that exists, but the only Role is named "pod-readers" — the grant
 // dangles. Ref_NotFound; the subject reference is the healthy distractor.
-func roleBindingRoleWrongName() Scenario {
+func roleBindingRoleWrongName(twin bool) Scenario {
+	roleName := "pod-readers"
+	if twin {
+		roleName = "pod-reader"
+	}
+
 	// RBAC kinds and ServiceAccounts have no status subresource — a dangling
 	// grant only surfaces at authorization time, so there is nothing to fail.
 	sa := NewServiceAccount(ServiceAccountParams{
@@ -722,7 +842,7 @@ func roleBindingRoleWrongName() Scenario {
 		ServerMeta: srv("6f6745bf-a31f-436d-ac1f-bc767edb29d8", "338563"),
 	})
 	role := NewRole(RoleParams{
-		Name: "pod-readers", Namespace: "production", App: "api",
+		Name: roleName, Namespace: "production", App: "api",
 		ServerMeta: srv("6d5f3e89-0a38-4c55-a448-81a702ab3f25", "615617"),
 	})
 	rb := NewRoleBinding(RoleBindingParams{
@@ -731,7 +851,7 @@ func roleBindingRoleWrongName() Scenario {
 		ServerMeta: srv("91b527ad-3120-41f7-a7d6-6a80dad3b594", "349902"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "rolebinding-role-wrong-name",
 		Group:      GroupRBAC,
 		FaultClass: FaultRefNotFound,
@@ -740,19 +860,24 @@ func roleBindingRoleWrongName() Scenario {
 			{Kind: "Role", Path: "metadata.name"},
 		},
 		YAML: joinDocs(rb, role, sa),
-	}
+	})
 }
 
 // clusterRoleBindingRoleWrongName is a ClusterRoleBinding granting clusterRole
 // "node-reader" to a ServiceAccount that exists, but the only ClusterRole is named
 // "node-readers" — kubectl auth can-i returns no. Ref_NotFound.
-func clusterRoleBindingRoleWrongName() Scenario {
+func clusterRoleBindingRoleWrongName(twin bool) Scenario {
+	crName := "node-readers"
+	if twin {
+		crName = "node-reader"
+	}
+
 	sa := NewServiceAccount(ServiceAccountParams{
 		Name: "api-sa", Namespace: "production", App: "api",
 		ServerMeta: srv("54645a22-fb49-4fef-a63a-174389824a05", "469961"),
 	})
 	cr := NewClusterRole(ClusterRoleParams{
-		Name: "node-readers", App: "api",
+		Name: crName, App: "api",
 		ServerMeta: srv("e6a0b733-6944-4ef7-a828-9277b629a14f", "531604"),
 	})
 	crb := NewClusterRoleBinding(ClusterRoleBindingParams{
@@ -761,7 +886,7 @@ func clusterRoleBindingRoleWrongName() Scenario {
 		ServerMeta: srv("5ecd7f8a-6eec-45f9-a3be-40609d315b06", "661120"),
 	})
 
-	return Scenario{
+	return maybeTwin(twin, Scenario{
 		Name:       "clusterrolebinding-role-wrong-name",
 		Group:      GroupRBAC,
 		FaultClass: FaultRefNotFound,
@@ -770,7 +895,7 @@ func clusterRoleBindingRoleWrongName() Scenario {
 			{Kind: "ClusterRole", Path: "metadata.name"},
 		},
 		YAML: joinDocs(crb, cr, sa),
-	}
+	})
 }
 
 // healthyBundle is a fully consistent Deployment+ConfigMap+Secret (refs resolve,

@@ -137,9 +137,15 @@ func main() {
 			continue
 		}
 
-		targets, err := heatmap.Keys(s.YAML)
-		if err != nil {
-			log.Fatalf("%s keys: %v", s.Name, err)
+		// A twin has no fault, hence no saliency to measure: baseline only. Its
+		// k trials are the paired false-positive control for its faulty scenario.
+		var targets []heatmap.Target
+		if s.TwinOf == "" {
+			var err error
+			targets, err = heatmap.Keys(s.YAML)
+			if err != nil {
+				log.Fatalf("%s keys: %v", s.Name, err)
+			}
 		}
 
 		fmt.Printf("%s [%s]: baseline %d/%d correct, ablating %d fields × k=%d…\n",

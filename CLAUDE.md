@@ -47,7 +47,8 @@ levels) is not yet.
 - **`reduce()` — NOT STARTED.** It will wrap the same field-remover kernel and load
   m3's level→field-keys config. The kernel (`heatmap.Remove`) already exists.
 
-Catalog right now: **~20 scenarios, 4 fault classes, 7 run-groups, 31 Kinds.**
+Catalog right now: **19 faulty scenarios + 19 healthy twins + 1 healthy control,
+4 fault classes, 7 run-groups, 31 Kinds.**
 
 **Load-bearing reality — read this before adding scenarios:** the RCA model is a small
 local model (qwen2.5:7b-instruct via Ollama). It reliably diagnoses only a *subset* of
@@ -135,6 +136,17 @@ model. This split is mandated — see "measurement contract".
   it as "missed the fault" mechanically yields saliency 1.00 — tautological. So deciding
   loci go to a **separate control table** (metric: `Recognized` = fraction that returned
   `NoFaultFound` once the fault is gone), never the saliency map.
+- **healthy twin** — every faulty scenario has a `<name>-twin`: the identical bundle
+  with the single anomaly fixed (and statuses healthy), expected `NoFaultFound`.
+  Twins measure the per-scenario false-positive rate: a high faulty baseline with a
+  low twin NoFault rate means the model always suspects that fault on that bundle
+  shape — bias, not diagnosis (lesson 1). Built by the same constructor
+  (`scenarioX(twin bool)` + `maybeTwin`); the producer runs twins **baseline-only**
+  (no fault → no saliency to measure), so they cost k calls each. Rendered as
+  `twins.gen.tex` — per pair: baseline accuracy (sensitivity), twin NoFault rate
+  (specificity) and Youden's J = both − 1 with a Newcombe CI (bold = CI excludes 0;
+  J≈0 = pure bias). Twins are excluded from the saliency map, the control table,
+  and Table 3.
 - **the gate (#12)** — a *faulty* scenario whose baseline accuracy is below a threshold
   (`cmd/render -gate`, default 0.8) is excluded from the maps and reported in Table 4.
   Saliency is meaningless if the model cannot diagnose the full manifest to begin with.
@@ -151,8 +163,9 @@ model. This split is mandated — see "measurement contract".
 ## How to run
 
 ```
+make smoke                # baselines only, k=3, no shards — the cheap #12 gate check
 make run-<group>          # produce data/<scenario>.jsonl for a group (slow: model calls)
-make run-all              # all groups
+make run-all              # all groups (K=30 for the paper run; default K=10)
 make clean-data           # rm data/*.jsonl
 go run ./cmd/render       # data/ -> paper/*.gen.tex   (fast, pure; -gate to tune)
 go run ./cmd/viewer       # http://localhost:8080  (/ and /confidence)
@@ -177,8 +190,12 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
   measurement logic into LaTeX formatting.
 - **Paper tables today:** `heatmap.gen.tex` (Table 1 saliency map / Table 2 control-
   Recognized / Table 3 healthy false-positive rate / Table 4 gated-out scenarios),
-  `confidence.gen.tex` (the same with 95% CIs and a Signal column), `baseline.gen.tex`
-  (the full unreduced manifests, for the paper to show what the agent sees).
+  `confidence.gen.tex` (the same with 95% CIs and a Signal column), `fdr.gen.tex`
+  (the multiple-comparison decision table: every saliency cell ranked by McNemar p
+  and BH q, with the raw discordant seed counts — the audit trail for every bold
+  cell), `twins.gen.tex` (discrimination: per faulty scenario its baseline accuracy,
+  the twin's NoFaultFound rate, and Youden's J with CIs), `baseline.gen.tex` (the
+  full unreduced manifests, for the paper to show what the agent sees).
 
 ## Hard-won lessons (the expensive part — do not relearn these)
 
@@ -229,17 +246,24 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
    Reverting the collapse silently corrupts every measurement. (See memory
    "empty-parent-pruning".)
 
-7. **Confidence intervals, not raw fractions.** At k=10 every fraction has a ~±0.28 CI —
-   0.20 and 0.40 are statistically indistinguishable. Single proportions (control
-   Recognized, FP) use **Wilson**; saliency (a *difference* of two proportions) uses
-   **Newcombe**. A field is "signal" only when its saliency CI **excludes 0**
-   (`ciLow > 0`) — that is the bold rule, NOT `saliency > 0`. This keeps the map honestly
-   dark and quantifies what k is needed (a 0.20 effect needs k≥30).
+7. **Significance = paired McNemar + BH-FDR; CIs are the effect-size display.** At k=10
+   every fraction has a ~±0.28 CI — 0.20 and 0.40 are statistically indistinguishable.
+   Single proportions (control Recognized, FP) use **Wilson**; saliency shows its
+   **Newcombe** 95% CI. But the bold/"Signal" rule is NOT the CI: baseline and every
+   ablation share seeds 0..k-1, so each cell gets a **seed-paired exact McNemar
+   p-value** (valid under H0 even if the shared seed doesn't couple the runs; coupling
+   only adds power), then **Benjamini–Hochberg** across all cells of the map, signal =
+   q ≤ 0.05. Why both parts matter: at ~150 simultaneous cells a raw per-cell 0.05
+   admits ~7 false positives — on the k=10 data the old CI rule bolded exactly 3 cells,
+   all destabilization artifacts (lesson 8), and all die under BH. Flip side: at k=10 a
+   *lone* full flip (p=2⁻⁹) still cannot clear BH over 150 tests — real signal needs
+   k≥30 (full flip p≈2·10⁻⁹) or several concordant cells. `make run-all K=30`.
 
 8. **Removal-induced destabilization ≠ signal.** With a fragile model, removing an
    *unrelated* field can knock a correct diagnosis off, producing a positive saliency
    that is not diagnostic signal. Watch for borderline-significant non-deciding cells;
-   note them as a first-order limitation. A stronger model reduces this.
+   note them as a first-order limitation. A stronger model reduces this. (The BH-FDR
+   rule in lesson 7 is the systematic defense; it killed all three such cells at k=10.)
 
 9. **Healthy (NoFault) scenarios are a control, not a saliency source.** They have no
    fault to lose; their "saliency" is just removal-induced hallucination. Excluded from

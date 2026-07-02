@@ -48,3 +48,39 @@ func TestNewcombe(t *testing.T) {
 		t.Errorf("saliency 1.00 must register as signal (lo=%.4f <= 0)", lo)
 	}
 }
+
+func TestMcNemar(t *testing.T) {
+	cases := []struct {
+		b, c int
+		want float64
+	}{
+		{0, 0, 1.0},       // no discordant seeds — no evidence at all
+		{3, 3, 1.0},       // perfectly split — capped at 1
+		{5, 0, 0.0625},    // 2·(1/2)^5: five one-sided flips, not yet 0.05
+		{8, 0, 0.0078},    // 2·(1/2)^8: significant at k=10 when 8 seeds flip
+		{10, 0, 0.001953}, // full flip at k=10
+		{9, 1, 0.021484},  // 2·(P(0)+P(1)) over n=10
+	}
+	for _, c := range cases {
+		approx(t, "mcnemar", mcnemar(c.b, c.c), c.want)
+		approx(t, "mcnemar sym", mcnemar(c.c, c.b), c.want) // symmetric in b,c
+	}
+}
+
+func TestBHAdjust(t *testing.T) {
+	// Classic BH: the three small p's share the q of the largest of them
+	// (step-up monotonicity); the big one stays big.
+	qs := bhAdjust([]float64{0.01, 0.02, 0.03, 0.5})
+	want := []float64{0.04, 0.04, 0.04, 0.5}
+	for i := range want {
+		approx(t, "bh q", qs[i], want[i])
+	}
+
+	if got := bhAdjust(nil); len(got) != 0 {
+		t.Errorf("bhAdjust(nil) = %v, want empty", got)
+	}
+
+	// A single test is left untouched.
+	qs = bhAdjust([]float64{0.04})
+	approx(t, "bh single", qs[0], 0.04)
+}
