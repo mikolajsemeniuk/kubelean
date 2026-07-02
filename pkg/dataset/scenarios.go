@@ -13,6 +13,8 @@ const (
 	GroupReferences = "references"
 	GroupNetworking = "networking"
 	GroupVolumes    = "volumes"
+	GroupScaling    = "scaling"
+	GroupRBAC       = "rbac"
 	GroupHealthy    = "healthy"
 )
 
@@ -43,6 +45,7 @@ func All() []Scenario {
 		selectorLabelMismatch(),
 		statefulSetSelectorMismatch(),
 		daemonSetSelectorMismatch(),
+		replicaSetSelectorMismatch(),
 		secretWrongName(),
 		configMapRefWrongName(),
 		serviceAccountWrongName(),
@@ -50,6 +53,12 @@ func All() []Scenario {
 		pvcClaimWrongName(),
 		configMapVolumeWrongName(),
 		secretVolumeWrongName(),
+		storageClassWrongName(),
+		hpaTargetWrongName(),
+		vpaTargetWrongName(),
+		priorityClassWrongName(),
+		roleBindingRoleWrongName(),
+		clusterRoleBindingRoleWrongName(),
 		serviceSelectorMismatch(),
 		servicePortMismatch(),
 		healthyBundle(),
@@ -495,6 +504,179 @@ func serviceAccountWrongName() Scenario {
 			{Kind: "ServiceAccount", Path: "metadata.name"},
 		},
 		YAML: joinDocs(dep, sa),
+	}
+}
+
+// replicaSetSelectorMismatch is a single ReplicaSet whose pod template labels
+// (app=web-frontend) do not match its selector (app=web) — SelectorMismatch on a
+// fourth workload Kind, single document.
+func replicaSetSelectorMismatch() Scenario {
+	rs := NewReplicaSet(ReplicaSetParams{
+		Name:          "web",
+		Namespace:     "production",
+		App:           "web",
+		Replicas:      3,
+		SelectorApp:   "web",
+		PodApp:        "web-frontend",
+		ContainerName: "web",
+		Image:         "nginx:1.25",
+		ContainerPort: 8080,
+	})
+
+	return Scenario{
+		Name:       "replicaset-selector-mismatch",
+		Group:      GroupSelector,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "ReplicaSet", Path: "spec.selector.matchLabels.app"},
+			{Kind: "ReplicaSet", Path: "spec.template.metadata.labels.app"},
+		},
+		YAML: joinDocs(rs),
+	}
+}
+
+// storageClassWrongName is a PVC requesting storageClass "fast-ssd", but the only
+// StorageClass is named "fast-ssds" — the claim stays Pending. Ref_NotFound.
+func storageClassWrongName() Scenario {
+	pvc := NewPVC(PVCParams{
+		Name: "api-data", Namespace: "production", App: "api",
+		Storage: "10Gi", StorageClass: "fast-ssd",
+	})
+
+	sc := NewStorageClass(StorageClassParams{Name: "fast-ssds", App: "api", Provisioner: "ebs.csi.aws.com"})
+
+	return Scenario{
+		Name:       "storageclass-wrong-name",
+		Group:      GroupVolumes,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "PersistentVolumeClaim", Path: "spec.storageClassName"},
+			{Kind: "StorageClass", Path: "metadata.name"},
+		},
+		YAML: joinDocs(pvc, sc),
+	}
+}
+
+// hpaTargetWrongName is an HPA scaling scaleTargetRef "api", but the Deployment is
+// named "api-server" — the HPA targets nothing. Ref_NotFound.
+func hpaTargetWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name: "api-server", Namespace: "production", App: "api",
+		Replicas: 2, SelectorApp: "api", PodApp: "api",
+		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
+	})
+
+	hpa := NewHPA(HPAParams{
+		Name: "api", Namespace: "production", App: "api",
+		TargetKind: "Deployment", TargetName: "api", MinReplicas: 2, MaxReplicas: 10,
+	})
+
+	return Scenario{
+		Name:       "hpa-target-wrong-name",
+		Group:      GroupScaling,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "HorizontalPodAutoscaler", Path: "spec.scaleTargetRef.name"},
+			{Kind: "Deployment", Path: "metadata.name"},
+		},
+		YAML: joinDocs(hpa, dep),
+	}
+}
+
+// vpaTargetWrongName is a VPA right-sizing targetRef "api", but the Deployment is
+// named "api-server" — the VPA targets nothing. Ref_NotFound.
+func vpaTargetWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name: "api-server", Namespace: "production", App: "api",
+		Replicas: 2, SelectorApp: "api", PodApp: "api",
+		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
+	})
+
+	vpa := NewVPA(VPAParams{
+		Name: "api", Namespace: "production", App: "api",
+		TargetKind: "Deployment", TargetName: "api",
+	})
+
+	return Scenario{
+		Name:       "vpa-target-wrong-name",
+		Group:      GroupScaling,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "VerticalPodAutoscaler", Path: "spec.targetRef.name"},
+			{Kind: "Deployment", Path: "metadata.name"},
+		},
+		YAML: joinDocs(vpa, dep),
+	}
+}
+
+// priorityClassWrongName is a Deployment whose pods request priorityClass
+// "high-priority", but the only PriorityClass is named "high-priorities" — the pods
+// are rejected by admission. Ref_NotFound.
+func priorityClassWrongName() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name: "api", Namespace: "production", App: "api",
+		Replicas: 2, SelectorApp: "api", PodApp: "api",
+		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
+		PriorityClassName: "high-priority",
+	})
+
+	pc := NewPriorityClass(PriorityClassParams{Name: "high-priorities", App: "api", Value: 1000000, Description: "critical API pods"})
+
+	return Scenario{
+		Name:       "priorityclass-wrong-name",
+		Group:      GroupScaling,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.priorityClassName"},
+			{Kind: "PriorityClass", Path: "metadata.name"},
+		},
+		YAML: joinDocs(dep, pc),
+	}
+}
+
+// roleBindingRoleWrongName is a RoleBinding granting role "pod-reader" to a
+// ServiceAccount that exists, but the only Role is named "pod-readers" — the grant
+// dangles. Ref_NotFound; the subject reference is the healthy distractor.
+func roleBindingRoleWrongName() Scenario {
+	sa := NewServiceAccount(ServiceAccountParams{Name: "api-sa", Namespace: "production", App: "api"})
+	role := NewRole(RoleParams{Name: "pod-readers", Namespace: "production", App: "api"})
+	rb := NewRoleBinding(RoleBindingParams{
+		Name: "api-read", Namespace: "production", App: "api",
+		ServiceAccountName: "api-sa", RoleName: "pod-reader",
+	})
+
+	return Scenario{
+		Name:       "rolebinding-role-wrong-name",
+		Group:      GroupRBAC,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "RoleBinding", Path: "roleRef.name"},
+			{Kind: "Role", Path: "metadata.name"},
+		},
+		YAML: joinDocs(rb, role, sa),
+	}
+}
+
+// clusterRoleBindingRoleWrongName is a ClusterRoleBinding granting clusterRole
+// "node-reader" to a ServiceAccount that exists, but the only ClusterRole is named
+// "node-readers" — kubectl auth can-i returns no. Ref_NotFound.
+func clusterRoleBindingRoleWrongName() Scenario {
+	sa := NewServiceAccount(ServiceAccountParams{Name: "api-sa", Namespace: "production", App: "api"})
+	cr := NewClusterRole(ClusterRoleParams{Name: "node-readers", App: "api"})
+	crb := NewClusterRoleBinding(ClusterRoleBindingParams{
+		Name: "api-node-read", App: "api", Namespace: "production",
+		ServiceAccountName: "api-sa", ClusterRoleName: "node-reader",
+	})
+
+	return Scenario{
+		Name:       "clusterrolebinding-role-wrong-name",
+		Group:      GroupRBAC,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "ClusterRoleBinding", Path: "roleRef.name"},
+			{Kind: "ClusterRole", Path: "metadata.name"},
+		},
+		YAML: joinDocs(crb, cr, sa),
 	}
 }
 
