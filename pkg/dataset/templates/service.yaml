@@ -18,6 +18,17 @@ spec:
   type: {{ .Type }}
   {{- if .Headless }}
   clusterIP: None
+  {{- else if .ClusterIP }}
+  clusterIP: {{ .ClusterIP }}
+  clusterIPs:
+    - {{ .ClusterIP }}
+  {{- end }}
+  {{- if .Created }}
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
   {{- end }}
   selector:
     app: {{ .SelectorApp }}

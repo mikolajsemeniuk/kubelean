@@ -23,6 +23,9 @@ spec:
   resources:
     requests:
       storage: {{ .Storage }}
+  {{- if .Created }}
+  volumeMode: Filesystem
+  {{- end }}
 {{- if eq .Status "healthy" }}
 status:
   accessModes:

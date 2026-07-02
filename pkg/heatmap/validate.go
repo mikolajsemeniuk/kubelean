@@ -22,9 +22,72 @@ var requiredPaths = map[string][]string{
 		"/metadata/name",
 		"/spec/selector",
 		"/spec/template/spec/containers/[]/name",
+		"/spec/template/spec/containers/[]/image",
 	},
-	"ConfigMap": {"/metadata/name"},
-	"Secret":    {"/metadata/name"},
+	"StatefulSet": {
+		"/metadata/name",
+		"/spec/selector",
+		"/spec/serviceName",
+		"/spec/template/spec/containers/[]/name",
+		"/spec/template/spec/containers/[]/image",
+	},
+	"DaemonSet": {
+		"/metadata/name",
+		"/spec/selector",
+		"/spec/template/spec/containers/[]/name",
+		"/spec/template/spec/containers/[]/image",
+	},
+	"ReplicaSet": {
+		"/metadata/name",
+		"/spec/selector",
+		"/spec/template/spec/containers/[]/name",
+		"/spec/template/spec/containers/[]/image",
+	},
+	"Service": {
+		"/metadata/name",
+		"/spec/ports/[]/port",
+	},
+	"ConfigMap":      {"/metadata/name"},
+	"Secret":         {"/metadata/name"},
+	"ServiceAccount": {"/metadata/name"},
+	"PersistentVolumeClaim": {
+		"/metadata/name",
+		"/spec/accessModes/[]",
+		"/spec/resources/requests/storage",
+	},
+	"StorageClass": {
+		"/metadata/name",
+		"/provisioner",
+	},
+	"HorizontalPodAutoscaler": {
+		"/metadata/name",
+		"/spec/maxReplicas",
+		"/spec/scaleTargetRef/kind",
+		"/spec/scaleTargetRef/name",
+	},
+	"VerticalPodAutoscaler": {
+		"/metadata/name",
+		"/spec/targetRef/kind",
+		"/spec/targetRef/name",
+	},
+	"PriorityClass": {
+		"/metadata/name",
+		"/value",
+	},
+	"Role": {"/metadata/name"},
+	"RoleBinding": {
+		"/metadata/name",
+		"/roleRef/apiGroup",
+		"/roleRef/kind",
+		"/roleRef/name",
+	},
+	"ClusterRole": {"/metadata/name"},
+	"ClusterRoleBinding": {
+		"/metadata/name",
+		"/roleRef/apiGroup",
+		"/roleRef/kind",
+		"/roleRef/name",
+	},
 }
 
 // Valid reports whether every document in the stream still satisfies its Kind's

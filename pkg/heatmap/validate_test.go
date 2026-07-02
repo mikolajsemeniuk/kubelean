@@ -41,9 +41,17 @@ func TestValid(t *testing.T) {
 		t.Error("container without name should be invalid")
 	}
 
-	// Removing an OPTIONAL field (image) stays valid — only required fields gate.
+	// Removing a container's required image -> invalid (the API rejects a
+	// container without image).
 	noImage := removeOrFail(t, deployYAML, "/spec/template/spec/containers/0/image")
-	if ok, probs, _ := Valid(noImage); !ok {
-		t.Errorf("removing optional image should stay valid, got %v", probs)
+	if ok, _, _ := Valid(noImage); ok {
+		t.Error("container without image should be invalid")
+	}
+
+	// Removing an OPTIONAL field (replicas, defaults to 1) stays valid — only
+	// required fields gate.
+	noReplicas := removeOrFail(t, deployYAML, "/spec/replicas")
+	if ok, probs, _ := Valid(noReplicas); !ok {
+		t.Errorf("removing optional replicas should stay valid, got %v", probs)
 	}
 }

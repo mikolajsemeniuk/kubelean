@@ -42,12 +42,15 @@ type row struct {
 }
 
 func main() {
-	dir := flag.String("in", "data", "directory of JSONL shards")
+	in := flag.String("in", "data", "root directory of JSONL shards (a per-model subdirectory is appended)")
+	model := flag.String("model", "qwen2.5:7b-instruct", "model whose shards to browse — selects data/<model>/")
 	addr := flag.String("addr", ":8080", "listen address")
 	flag.Parse()
 
+	dir := filepath.Join(*in, modelDir(*model))
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		scenarios, rows, err := aggregate(*dir)
+		scenarios, rows, err := aggregate(dir)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -57,7 +60,7 @@ func main() {
 	})
 
 	http.HandleFunc("/confidence", func(w http.ResponseWriter, r *http.Request) {
-		sals, ctls, fps, err := confAggregate(*dir)
+		sals, ctls, fps, err := confAggregate(dir)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -66,8 +69,14 @@ func main() {
 		writeConfidence(w, sals, ctls, fps)
 	})
 
-	log.Printf("kubelean viewer on http://localhost%s (reading %s)", *addr, *dir)
+	log.Printf("kubelean viewer on http://localhost%s (reading %s)", *addr, dir)
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+// modelDir renders a model name as a directory component (":" and "/" are not
+// filesystem-safe).
+func modelDir(model string) string {
+	return strings.NewReplacer(":", "-", "/", "-").Replace(model)
 }
 
 // aggregate reads the shards and returns the sorted scenario columns and the field

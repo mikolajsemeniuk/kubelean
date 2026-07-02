@@ -70,7 +70,7 @@ Set offending_field to the YAML path most responsible, or "none".`
 func main() {
 	flag.StringVar(&host, "host", "http://localhost:11434", "Ollama host")
 	flag.StringVar(&model, "model", "qwen2.5:7b-instruct", "model name")
-	flag.StringVar(&out, "out", "data", "output directory for JSONL shards")
+	flag.StringVar(&out, "out", "data", "root output directory for JSONL shards (a per-model subdirectory is appended)")
 	flag.StringVar(&group, "group", "", "scenario group to produce")
 	flag.IntVar(&k, "k", 10, "samples per variant (seed = 0..k-1)")
 	flag.Float64Var(&temp, "temp", 0.7, "sampling temperature (>0 so seeds give varied draws)")
@@ -97,7 +97,11 @@ func main() {
 		digest = "unknown"
 	}
 
-	if err := os.MkdirAll(out, 0o755); err != nil {
+	// Shards are namespaced per model (data/<model>/...) so a second model's
+	// run never overwrites the first — the future multi-model comparison
+	// depends on both sets surviving side by side.
+	shardDir := filepath.Join(out, modelDir(model))
+	if err := os.MkdirAll(shardDir, 0o755); err != nil {
 		log.Fatal(err)
 	}
 
@@ -181,7 +185,7 @@ func main() {
 		}
 		fmt.Printf("  %d/%d variants invalid (recorded, flagged in shard)\n", invalid, len(targets))
 
-		path := filepath.Join(out, s.Name+".jsonl")
+		path := filepath.Join(shardDir, s.Name+".jsonl")
 		f, err := os.Create(path)
 		if err != nil {
 			log.Fatalf("create %s: %v", path, err)
@@ -200,6 +204,12 @@ func main() {
 		dur := fmt.Sprintf("%dm%02ds", int(d.Minutes()), int(d.Seconds())%60)
 		fmt.Printf("wrote %s (%d trials) in %s\n", path, len(recs), dur)
 	}
+}
+
+// modelDir renders a model name as a directory component (":" and "/" are not
+// filesystem-safe).
+func modelDir(model string) string {
+	return strings.NewReplacer(":", "-", "/", "-").Replace(model)
 }
 
 // trial runs one model call at the given seed and returns the raw record. Answer

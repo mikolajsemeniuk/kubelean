@@ -77,12 +77,16 @@ Levels are an *output* of the experiment, not an input.
 pkg/dataset    generators (one file per Kind) + templates/ + scenarios.go + faults.go
 pkg/heatmap    the field-remover kernel + resolver + validator + JSONL wire type
 pkg/providers  ollama.go — the model client (structured output, digest pinning)
-cmd/heatmap    PRODUCER: run model over baseline+ablations, write data/<scenario>.jsonl
-cmd/render     RENDERER: read shards -> saliency + CIs + gate -> paper/*.gen.tex
+cmd/heatmap    PRODUCER: run model over baseline+ablations, write data/<model>/<scenario>.jsonl
+cmd/render     RENDERER: read shards -> saliency + CIs + gate -> paper/<model>/*.gen.tex
 cmd/viewer     throwaway browser heatmap on :8080 ( / and /confidence )
-data/          raw per-trial JSONL shards, one file per scenario
-paper/         *.gen.tex fragments (LaTeX \input-able tables)
+data/          raw per-trial JSONL shards, one DIRECTORY PER MODEL, one file per scenario
+paper/         *.gen.tex fragments (LaTeX \input-able tables), one directory per model
 ```
+
+All three cmds take `-model` (default qwen2.5:7b-instruct) and namespace their I/O by
+it (`:`/`/` become `-`), so a 32b run never overwrites the 7b shards — that isolation
+IS the future multi-model comparison. Make passes it via `MODEL=`.
 
 Flow: **producer → raw JSONL → renderer → tables.** The producer is the only slow part
 (model calls). The renderer is pure and fast: methodology changes never re-run the
@@ -174,12 +178,14 @@ model. This split is mandated — see "measurement contract".
 
 ```
 make smoke                # baselines only, k=3, no shards — the cheap #12 gate check
-make run-<group>          # produce data/<scenario>.jsonl for a group (slow: model calls)
-make run-all              # all groups (K=30 for the paper run; default K=10)
-make clean-data           # rm data/*.jsonl
-go run ./cmd/render       # data/ -> paper/*.gen.tex   (fast, pure; -gate to tune)
+make run-<group>          # produce data/<model>/<scenario>.jsonl (slow: model calls)
+make run-all              # all groups (K=30+ for the paper run; default K=10)
+make render               # data/<model>/ -> paper/<model>/*.gen.tex (fast, pure)
+make clean-data           # rm -rf data/*
 go run ./cmd/viewer       # http://localhost:8080  (/ and /confidence)
 ```
+
+Every target takes `MODEL=<ollama tag>` (default qwen2.5:7b-instruct) and `K=`.
 
 Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7),
 `-num-ctx` (8192), `-model`, `-out` (data). Overwrites each scenario's shard.
@@ -200,7 +206,10 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
   measurement logic into LaTeX formatting.
 - **Paper tables today:** `heatmap.gen.tex` (Table 1 saliency map / Table 2a
   fault-deleting control / Table 2b evidence-hiding control / Table 3 healthy
-  false-positive rate / Table 4 gated-out scenarios),
+  false-positive rate / Table 3b per-field removal-induced hallucination on healthy
+  bundles, the fragility floor for lesson 8 / Table 4 gated-out scenarios / Table 6
+  localization: among correct-class baselines, did offending\_field point at a
+  deciding locus — right answer for the right reason),
   `confidence.gen.tex` (the same with 95% CIs and a Signal column), `fdr.gen.tex`
   (the multiple-comparison decision table: every saliency cell ranked by McNemar p
   and BH q, with the raw discordant seed counts — the audit trail for every bold
@@ -242,7 +251,16 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
    real deciding field doesn't restore health, breaking the flip. Fix was
    `port==targetPort==containerPort` in the healthy state. When a scenario needs a
    supporting object (a Service the Ingress points to), that object must be fully healthy,
-   which often means adding its backing workload too.
+   which often means adding its backing workload too. Related design rule: the
+   wrong-name scenarios deliberately use DIFFERENT divergence types (pluralization,
+   unrelated name, env suffix, abbreviation, lost hyphen, extra segment, synonym) —
+   if every fault were a one-char typo, the model could score by a "two names differ
+   by one char" surface heuristic instead of resolving references, and the paper
+   would be measuring typo detection. Confirmed empirically (smoke 2026-07, k=3):
+   diversifying collapsed several previously-perfect 7B baselines (secret-volume and
+   pvc-claim 3/3 → 0/3 — with a synonym name the model just says NoFaultFound), so
+   the earlier accuracy WAS substantially typo matching. Never revert the diversity
+   to win baselines back.
 
 5. **Field canonicalization is load-bearing** (it was "the first task of m2"). Keys are
    normalized (`indices → *`) and deduped; `Remove` deletes *every* instance. Composite
@@ -313,6 +331,7 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
   injected fault per instance. `PortMismatch` is defined but parked (7B can't do it
   cleanly).
 - **`validate.go` is structural only.** It checks required-field *presence*, not
-  relational invariants, and has no rules for many Kinds (Service, RBAC, …) — so their
-  ablations are never flagged invalid. `Valid` is a covariate, so this is tolerable, but
-  don't read it as "the manifest is semantically healthy".
+  relational invariants. Since 2026-07 `requiredPaths` covers every Kind in the
+  catalog (workloads incl. container image, Service, PVC, SC, HPA/VPA, RBAC, PC), so
+  the `Valid` covariate is trustworthy for stratification — but still don't read it
+  as "the manifest is semantically healthy".

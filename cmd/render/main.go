@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/mikolajsemeniuk/kubelean/pkg/dataset"
@@ -61,14 +62,20 @@ type cell struct {
 const fdr = 0.05
 
 func main() {
-	in := flag.String("in", "data", "directory of JSONL shards")
-	out := flag.String("out", "paper", "output directory")
+	in := flag.String("in", "data", "root directory of JSONL shards (a per-model subdirectory is appended)")
+	out := flag.String("out", "paper", "root output directory (a per-model subdirectory is appended)")
+	model := flag.String("model", "qwen2.5:7b-instruct", "model whose shards to render — selects data/<model>/ and paper/<model>/")
 	gate := flag.Float64("gate", 0.8, "min baseline accuracy for a faulty scenario to be scored (m2 #12 gate)")
 	flag.Parse()
 
-	recs := readShards(*in)
+	// Shards and artifacts are namespaced per model so a second model's run
+	// never overwrites the first — the whole point of the future comparison.
+	inDir := filepath.Join(*in, modelDir(*model))
+	outDir := filepath.Join(*out, modelDir(*model))
+
+	recs := readShards(inDir)
 	if len(recs) == 0 {
-		log.Fatalf("no records in %s — produce shards first (make run-<group>)", *in)
+		log.Fatalf("no records in %s — produce shards first (make run-<group> MODEL=%s)", inDir, *model)
 	}
 
 	// Resolve each scenario's deciding-field loci, then normalize their pointers to
@@ -76,6 +83,7 @@ func main() {
 	// decides() compares like with like. Each locus keeps its ground-truth role:
 	// fault-deleting vs evidence-hiding (dataset.DecidingField.Hides).
 	deciding := map[string][]locus{}
+	decidingNorms := map[string][][]string{} // normalized dotted paths, for offending_field scoring
 	for _, s := range dataset.All() {
 		for _, df := range s.DecidingFields {
 			ls, err := heatmap.ResolveLeaves(s.YAML, df.Kind, df.Path)
@@ -86,12 +94,15 @@ func main() {
 				ls[i].Pointer = heatmap.NormalizeKey(ls[i].Pointer)
 				deciding[s.Name] = append(deciding[s.Name], locus{ls[i], df.Hides})
 			}
+			decidingNorms[s.Name] = append(decidingNorms[s.Name], normPath(df.Path))
 		}
 	}
 
 	baseCorrect := map[string]int{}
 	baseTotal := map[string]int{}
 	baseSeed := map[string]map[int64]bool{} // scenario → seed → baseline correct (the McNemar pairing)
+	locTotal := map[string]int{}            // faulty-scenario baseline trials with the correct class...
+	locHit := map[string]int{}              // ...of which offending_field pointed at a deciding locus
 	cells := map[string]cell{}
 	faultClass := map[string]string{}
 	var order []string
@@ -111,6 +122,19 @@ func main() {
 				baseSeed[r.Scenario] = map[int64]bool{}
 			}
 			baseSeed[r.Scenario][r.Seed] = correct
+
+			// Localization: the class was right — did the model also blame a
+			// deciding field, or did it guess the class off a healthy distractor?
+			if correct && r.FaultClass != noFault {
+				locTotal[r.Scenario]++
+				var d struct {
+					OffendingField string `json:"offending_field"`
+				}
+				if json.Unmarshal([]byte(r.Raw), &d) == nil &&
+					locates(normPath(d.OffendingField), decidingNorms[r.Scenario]) {
+					locHit[r.Scenario]++
+				}
+			}
 			continue
 		}
 
@@ -284,6 +308,32 @@ func main() {
 		b.WriteString("\\bottomrule\n\\end{tabular}\n")
 	}
 
+	// Table 3b — removal-induced hallucination on healthy bundles: per ablated
+	// field, the fraction of trials that claimed a fault once the field was
+	// gone. This is the model's per-field fragility floor — a faulty-scenario
+	// saliency within this floor is destabilization, not diagnostic signal
+	// (lesson 8). Unparseable answers count as false positives.
+	wrote3b := false
+	for _, key := range order {
+		c := cells[key]
+		if faultClass[c.scenario] != dataset.FaultNoFault {
+			continue
+		}
+		if !wrote3b {
+			b.WriteString("\n% Table 3b — healthy bundles: per-field removal-induced hallucination rate\n")
+			b.WriteString("% (fraction of reduced trials NOT answering NoFaultFound). The fragility\n")
+			b.WriteString("% floor for interpreting borderline saliency cells (lesson 8).\n")
+			b.WriteString("\\begin{tabular}{lllcr}\n\\toprule\nScenario & Kind & Field & Valid & FP rate \\\\\n\\midrule\n")
+			wrote3b = true
+		}
+		fmt.Fprintf(&b, "%s & %s & \\texttt{%s} & %s & %.2f \\\\\n",
+			escapeTeX(c.scenario), escapeTeX(c.kind), escapeTeX(c.field), validMark(c.valid),
+			frac(c.total-c.matchNoFault, c.total))
+	}
+	if wrote3b {
+		b.WriteString("\\bottomrule\n\\end{tabular}\n")
+	}
+
 	// Below the #12 gate: faulty scenarios the model diagnoses too rarely to score.
 	// Reported for honesty — and as the motivation for the multi-model comparison.
 	var below []string
@@ -301,10 +351,34 @@ func main() {
 		b.WriteString("\\bottomrule\n\\end{tabular}\n")
 	}
 
-	if err := os.MkdirAll(*out, 0o755); err != nil {
+	// Table 6 — was the right class right for the right reason? Among baseline
+	// trials whose fault_class was correct, the fraction whose offending_field
+	// pointed at a deciding locus (lenient suffix match, see locates). A high
+	// baseline with a low rate here means the class was guessed off the bundle
+	// shape, not diagnosed from the fault. Gated scenarios included: their few
+	// correct trials are exactly the ones worth auditing.
+	var locNames []string
+	for s := range locTotal {
+		locNames = append(locNames, s)
+	}
+	sort.Strings(locNames)
+	if len(locNames) > 0 {
+		b.WriteString("\n% Table 6 — localization: baseline trials with the correct fault_class,\n")
+		b.WriteString("% fraction whose offending_field pointed at a deciding locus (suffix match\n")
+		b.WriteString("% on the last two path segments; document identity is not attributable in a\n")
+		b.WriteString("% free-form path). Low rate = right answer, wrong reason.\n")
+		b.WriteString("\\begin{tabular}{lrrr}\n\\toprule\nScenario & Correct baselines & Localized & Rate \\\\\n\\midrule\n")
+		for _, s := range locNames {
+			fmt.Fprintf(&b, "%s & %d & %d & %.2f \\\\\n",
+				escapeTeX(s), locTotal[s], locHit[s], frac(locHit[s], locTotal[s]))
+		}
+		b.WriteString("\\bottomrule\n\\end{tabular}\n")
+	}
+
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		log.Fatal(err)
 	}
-	path := filepath.Join(*out, "heatmap.gen.tex")
+	path := filepath.Join(outDir, "heatmap.gen.tex")
 	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
 		log.Fatalf("write %s: %v", path, err)
 	}
@@ -340,7 +414,7 @@ func main() {
 		written++
 	}
 
-	blPath := filepath.Join(*out, "baseline.gen.tex")
+	blPath := filepath.Join(outDir, "baseline.gen.tex")
 	if err := os.WriteFile(blPath, []byte(bl.String()), 0o644); err != nil {
 		log.Fatalf("write %s: %v", blPath, err)
 	}
@@ -413,7 +487,27 @@ func main() {
 		ci.WriteString("\\bottomrule\n\\end{tabular}\n")
 	}
 
-	ciPath := filepath.Join(*out, "confidence.gen.tex")
+	wroteC2 := false
+	for _, key := range order {
+		c := cells[key]
+		if faultClass[c.scenario] != dataset.FaultNoFault {
+			continue
+		}
+		if !wroteC2 {
+			ci.WriteString("\n% Table C2 — healthy bundles: per-field removal-induced hallucination rate\n% with 95% Wilson CI (see heatmap.gen.tex Table 3b).\n")
+			ci.WriteString("\\begin{tabular}{lllrc}\n\\toprule\nScenario & Kind & Field & FP rate & 95\\% CI \\\\\n\\midrule\n")
+			wroteC2 = true
+		}
+		fp := c.total - c.matchNoFault
+		lo, hi := wilson(fp, c.total)
+		fmt.Fprintf(&ci, "%s & %s & \\texttt{%s} & %.2f & [%.2f, %.2f] \\\\\n",
+			escapeTeX(c.scenario), escapeTeX(c.kind), escapeTeX(c.field), frac(fp, c.total), lo, hi)
+	}
+	if wroteC2 {
+		ci.WriteString("\\bottomrule\n\\end{tabular}\n")
+	}
+
+	ciPath := filepath.Join(outDir, "confidence.gen.tex")
 	if err := os.WriteFile(ciPath, []byte(ci.String()), 0o644); err != nil {
 		log.Fatalf("write %s: %v", ciPath, err)
 	}
@@ -459,7 +553,7 @@ func main() {
 	}
 	fd.WriteString("\\bottomrule\n\\end{tabular}\n")
 
-	fdrPath := filepath.Join(*out, "fdr.gen.tex")
+	fdrPath := filepath.Join(outDir, "fdr.gen.tex")
 	if err := os.WriteFile(fdrPath, []byte(fd.String()), 0o644); err != nil {
 		log.Fatalf("write %s: %v", fdrPath, err)
 	}
@@ -515,7 +609,7 @@ func main() {
 	}
 	tw.WriteString("\\bottomrule\n\\end{tabular}\n")
 
-	twPath := filepath.Join(*out, "twins.gen.tex")
+	twPath := filepath.Join(outDir, "twins.gen.tex")
 	if err := os.WriteFile(twPath, []byte(tw.String()), 0o644); err != nil {
 		log.Fatalf("write %s: %v", twPath, err)
 	}
@@ -576,6 +670,65 @@ func readShards(dir string) []heatmap.Record {
 		f.Close()
 	}
 	return recs
+}
+
+// modelDir renders a model name as a directory component (":" and "/" are not
+// filesystem-safe): shards and artifacts for different models live side by
+// side, so a 32b run never overwrites the 7b data.
+func modelDir(model string) string {
+	return strings.NewReplacer(":", "-", "/", "-").Replace(model)
+}
+
+// normPath splits a YAML path into lowercase segments, dropping array indices
+// and wildcards, so the model's free-form offending_field
+// ("spec.template.spec.containers[0].envFrom[1].secretRef.name") and the
+// catalog's dotted deciding paths land in one comparable form.
+func normPath(p string) []string {
+	var segs []string
+	for _, s := range strings.FieldsFunc(strings.ToLower(p), func(r rune) bool {
+		return r == '.' || r == '/' || r == '[' || r == ']' || r == '"' || r == '\'' || r == ' '
+	}) {
+		if s == "" || s == "*" {
+			continue
+		}
+		if _, err := strconv.Atoi(s); err == nil {
+			continue
+		}
+		segs = append(segs, s)
+	}
+
+	return segs
+}
+
+// locates reports whether the model's offending path points at any deciding
+// path. The match is a lenient suffix: the model path must end with the
+// deciding path's last two segments (or one, for single-segment paths) — so a
+// bare "secretRef.name" credits the full spec.template...secretRef.name locus
+// without demanding the whole prefix, while "metadata.name" never matches a
+// secretRef locus. Kind is not encoded in free-form paths, so a metadata.name
+// answer cannot be attributed to a specific document — a stated limitation.
+func locates(model []string, decidings [][]string) bool {
+	for _, d := range decidings {
+		n := 2
+		if len(d) < n {
+			n = len(d)
+		}
+		if n == 0 || len(model) < n {
+			continue
+		}
+		match := true
+		for i := 1; i <= n; i++ {
+			if model[len(model)-i] != d[len(d)-i] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+
+	return false
 }
 
 func frac(num, den int) float64 {

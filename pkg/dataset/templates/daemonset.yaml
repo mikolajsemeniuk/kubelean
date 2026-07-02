@@ -18,6 +18,9 @@ metadata:
   uid: {{ .UID }}
   {{- end }}
 spec:
+  {{- if .Created }}
+  revisionHistoryLimit: 10
+  {{- end }}
   selector:
     matchLabels:
       app: {{ .SelectorApp }}
@@ -32,8 +35,31 @@ spec:
       containers:
         - name: {{ .ContainerName }}
           image: {{ .Image }}
+          {{- if .Created }}
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          {{- end }}
           ports:
             - containerPort: {{ .ContainerPort }}
+              {{- if .Created }}
+              protocol: TCP
+              {{- end }}
+      {{- if .Created }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      {{- end }}
+  {{- if .Created }}
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  {{- end }}
 {{- /* status numbers assume a 3-node cluster */ -}}
 {{- if eq .Status "healthy" }}
 status:

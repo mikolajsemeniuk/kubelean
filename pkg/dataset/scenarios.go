@@ -238,10 +238,12 @@ func daemonSetSelectorMismatch(twin bool) Scenario {
 }
 
 // pvcClaimWrongName is a Deployment mounting a volume backed by PVC "api-data",
-// but the only PersistentVolumeClaim is named "api-datas" — a dangling claim
+// but the only PersistentVolumeClaim is named "apidata" — a dangling claim
 // (Pending pod in a real cluster). Ref_NotFound.
 func pvcClaimWrongName(twin bool) Scenario {
-	pvcName, status := "api-datas", StatusFailing
+	// Divergence type: punctuation — the claim exists without the hyphen
+	// ("apidata" vs the referenced "api-data").
+	pvcName, status := "apidata", StatusFailing
 	if twin {
 		pvcName, status = "api-data", StatusHealthy
 	}
@@ -283,11 +285,13 @@ func pvcClaimWrongName(twin bool) Scenario {
 }
 
 // configMapVolumeWrongName is a Deployment mounting ConfigMap "api-files" as a
-// volume, but the ConfigMap is named "api-file" — same Ref_NotFound, a different
+// volume, but the ConfigMap is named "api-config-files" — same Ref_NotFound, a different
 // reference site (volume source, not envFrom) so configMap.name and configMapRef
 // .name are distinct field-keys with their own cross-scenario profiles.
 func configMapVolumeWrongName(twin bool) Scenario {
-	cmName, status := "api-file", StatusFailing
+	// Divergence type: an extra middle segment — the ConfigMap exists as
+	// "api-config-files" while the volume asks for "api-files".
+	cmName, status := "api-config-files", StatusFailing
 	if twin {
 		cmName, status = "api-files", StatusHealthy
 	}
@@ -327,9 +331,11 @@ func configMapVolumeWrongName(twin bool) Scenario {
 }
 
 // secretVolumeWrongName is a Deployment mounting Secret "api-certs" as a volume,
-// but the Secret is named "api-cert" — Ref_NotFound at the secret volume source.
+// but the Secret is named "api-tls" — Ref_NotFound at the secret volume source.
 func secretVolumeWrongName(twin bool) Scenario {
-	secretName, status := "api-cert", StatusFailing
+	// Divergence type: semantic synonym — the Secret was created as "api-tls",
+	// the volume asks for "api-certs"; same thing to a human, not to the API.
+	secretName, status := "api-tls", StatusFailing
 	if twin {
 		secretName, status = "api-certs", StatusHealthy
 	}
@@ -369,11 +375,13 @@ func secretVolumeWrongName(twin bool) Scenario {
 }
 
 // imagePullSecretWrongName is a Deployment whose pods reference image pull secret
-// "registry-creds", but the only Secret in the bundle is named "registry-cred" —
+// "registry-creds", but the only Secret in the bundle is named "registry-credentials" —
 // a dangling reference (ImagePullBackOff in a real cluster). Ref_NotFound, a fourth
 // reference kind on the cross-scenario profile.
 func imagePullSecretWrongName(twin bool) Scenario {
-	secretName, status := "registry-cred", StatusFailing
+	// Divergence type: abbreviation vs full word — the Secret was created as
+	// "registry-credentials", the pod asks for "registry-creds".
+	secretName, status := "registry-credentials", StatusFailing
 	if twin {
 		secretName, status = "registry-creds", StatusHealthy
 	}
@@ -467,12 +475,15 @@ func secretWrongName(twin bool) Scenario {
 
 // configMapRefWrongName mirrors secretWrongName with the fault on the ConfigMap
 // side: the Deployment's envFrom configMapRef points at "api-config" but the
-// ConfigMap is named "api-configs" (the Secret here is the healthy distractor).
+// ConfigMap is named "app-settings" (the Secret here is the healthy distractor).
 // Same Ref_NotFound class, different deciding field — this is what gives
 // configMapRef.name a cross-scenario profile (noise in secret-ref-wrong-name,
 // deciding here).
 func configMapRefWrongName(twin bool) Scenario {
-	cmName, status := "api-configs", StatusFailing
+	// Divergence type: a completely different name (the ConfigMap was created
+	// under another naming convention) — no lexical overlap with the reference,
+	// so a "two names differ by one char" heuristic cannot find it.
+	cmName, status := "app-settings", StatusFailing
 	if twin {
 		cmName, status = "api-config", StatusHealthy
 	}
@@ -556,6 +567,7 @@ func serviceSelectorMismatch(twin bool) Scenario {
 		// unequal port would read as a spurious PortMismatch and mask the selector.
 		Port:       8080,
 		TargetPort: 8080,
+		ClusterIP:  "10.96.144.201",
 		ServerMeta: srv("bec0ae58-98c3-45b2-a889-b30bda34dcfb", "490059"),
 		Status:     StatusHealthy,
 	})
@@ -611,6 +623,7 @@ func servicePortMismatch(twin bool) Scenario {
 		// removing it must restore a fully healthy manifest for the flip to hold.
 		Port:       8080,
 		TargetPort: targetPort,
+		ClusterIP:  "10.96.72.34",
 		ServerMeta: srv("ac90a999-0245-4a18-afbf-0a3faee73512", "539940"),
 		Status:     StatusHealthy,
 	})
@@ -632,12 +645,14 @@ func servicePortMismatch(twin bool) Scenario {
 }
 
 // serviceAccountWrongName is a Deployment whose pods run as serviceAccount
-// "api-runner", but the only ServiceAccount in the bundle is named "api-runners"
+// "api-runner", but the only ServiceAccount in the bundle is named "api-runner-staging"
 // — a dangling reference. Same Ref_NotFound class as the secret/configmap cases,
 // a third reference kind, so serviceAccountName joins the cross-scenario profile
 // (deciding here, noise wherever a serviceAccount is not the fault).
 func serviceAccountWrongName(twin bool) Scenario {
-	saName, status := "api-runners", StatusFailing
+	// Divergence type: environment suffix — the SA exists, but as its staging
+	// variant (a copy-paste-between-environments mistake).
+	saName, status := "api-runner-staging", StatusFailing
 	if twin {
 		saName, status = "api-runner", StatusHealthy
 	}
@@ -710,9 +725,11 @@ func replicaSetSelectorMismatch(twin bool) Scenario {
 }
 
 // storageClassWrongName is a PVC requesting storageClass "fast-ssd", but the only
-// StorageClass is named "fast-ssds" — the claim stays Pending. Ref_NotFound.
+// StorageClass is named "fast-ssd-retain" — the claim stays Pending. Ref_NotFound.
 func storageClassWrongName(twin bool) Scenario {
-	scName, status := "fast-ssds", StatusFailing // faulty: the claim stays Pending
+	// Divergence type: variant suffix — the class exists as "fast-ssd-retain";
+	// the claim asks for plain "fast-ssd" and stays Pending.
+	scName, status := "fast-ssd-retain", StatusFailing
 	if twin {
 		scName, status = "fast-ssd", StatusHealthy
 	}
@@ -816,10 +833,12 @@ func vpaTargetWrongName(twin bool) Scenario {
 }
 
 // priorityClassWrongName is a Deployment whose pods request priorityClass
-// "high-priority", but the only PriorityClass is named "high-priorities" — the pods
+// "high-priority", but the only PriorityClass is named "critical-priority" — the pods
 // are rejected by admission. Ref_NotFound.
 func priorityClassWrongName(twin bool) Scenario {
-	pcName, status := "high-priorities", StatusFailing
+	// Divergence type: different word — the class exists as "critical-priority",
+	// the pods request "high-priority".
+	pcName, status := "critical-priority", StatusFailing
 	if twin {
 		pcName, status = "high-priority", StatusHealthy
 	}
@@ -851,10 +870,12 @@ func priorityClassWrongName(twin bool) Scenario {
 }
 
 // roleBindingRoleWrongName is a RoleBinding granting role "pod-reader" to a
-// ServiceAccount that exists, but the only Role is named "pod-readers" — the grant
+// ServiceAccount that exists, but the only Role is named "pod-viewer" — the grant
 // dangles. Ref_NotFound; the subject reference is the healthy distractor.
 func roleBindingRoleWrongName(twin bool) Scenario {
-	roleName := "pod-readers"
+	// Divergence type: synonym — the Role exists as "pod-viewer", the binding
+	// grants "pod-reader".
+	roleName := "pod-viewer"
 	if twin {
 		roleName = "pod-reader"
 	}

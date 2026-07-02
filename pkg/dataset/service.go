@@ -22,6 +22,7 @@ type ServiceParams struct {
 	Port        int    // spec.ports[].port
 	TargetPort  int    // spec.ports[].targetPort
 	NodePort    int    // spec.ports[].nodePort (0 omits it; only valid for NodePort)
+	ClusterIP   string // optional: the server-assigned clusterIP ("" omits it; ignored when Headless)
 	ServerMeta         // optional: server-assigned metadata (kubectl get shape)
 	Status      string // optional: any non-empty value renders status.loadBalancer {}
 }

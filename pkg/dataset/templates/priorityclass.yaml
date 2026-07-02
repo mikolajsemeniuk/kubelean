@@ -15,4 +15,7 @@ metadata:
   {{- end }}
 value: {{ .Value }}
 globalDefault: false
+{{- if .Created }}
+preemptionPolicy: PreemptLowerPriority
+{{- end }}
 description: {{ .Description }}
