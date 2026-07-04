@@ -34,6 +34,9 @@ type PDBParams struct {
 	App          string
 	MinAvailable int
 	SelectorApp  string // spec.selector.matchLabels.app
+	Pods         int    // status expectedPods/currentHealthy when healthy (the matched pod count)
+	ServerMeta          // optional: server-assigned metadata (kubectl get shape)
+	Status       string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
 
 //go:embed templates/poddisruptionbudget.yaml

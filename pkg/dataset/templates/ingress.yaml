@@ -1,12 +1,26 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
+  {{- if .IngressClass }}
   ingressClassName: {{ .IngressClass }}
+  {{- end }}
   rules:
     - host: {{ .Host }}
       http:
@@ -18,3 +32,9 @@ spec:
                 name: {{ .ServiceName }}
                 port:
                   number: {{ .ServicePort }}
+{{- if .Status }}
+status:
+  loadBalancer:
+    ingress:
+      - ip: 203.0.113.10
+{{- end }}

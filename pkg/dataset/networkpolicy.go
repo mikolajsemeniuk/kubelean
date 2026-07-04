@@ -17,6 +17,7 @@ type NetworkPolicyParams struct {
 	PodSelectorApp string // spec.podSelector.matchLabels.app
 	FromApp        string // spec.ingress[].from[].podSelector.matchLabels.app
 	Port           int
+	ServerMeta     // optional: server-assigned metadata (kubectl get shape); NetworkPolicy has no status
 }
 
 //go:embed templates/networkpolicy.yaml

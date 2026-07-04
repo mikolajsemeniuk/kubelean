@@ -1,12 +1,39 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   minAvailable: {{ .MinAvailable }}
   selector:
     matchLabels:
       app: {{ .SelectorApp }}
+{{- if eq .Status "healthy" }}
+status:
+  currentHealthy: {{ .Pods }}
+  desiredHealthy: {{ .MinAvailable }}
+  disruptionsAllowed: 1
+  expectedPods: {{ .Pods }}
+  observedGeneration: {{ .Generation }}
+{{- else if eq .Status "failing" }}
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+  observedGeneration: {{ .Generation }}
+{{- end }}

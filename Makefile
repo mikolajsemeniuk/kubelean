@@ -2,7 +2,7 @@
 
 # Samples per variant. Default 10 for quick runs; a 0.2 saliency effect needs
 # k>=30 to clear noise, so the paper run is: make run-all K=30.
-K ?= 10
+K ?= 40
 
 # The RCA model under test. Shards land in data/<model>/ and artifacts in
 # paper/<model>/, so runs for different models never overwrite each other:
@@ -41,6 +41,3 @@ run-all: run-selector run-references run-networking run-volumes run-scaling run-
 
 render:
 	go run ./cmd/render -model $(MODEL)
-
-clean-data:
-	rm -rf data/*

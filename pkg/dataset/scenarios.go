@@ -78,8 +78,18 @@ func All() []Scenario {
 		priorityClassWrongName,
 		roleBindingRoleWrongName,
 		clusterRoleBindingRoleWrongName,
+		roleBindingSubjectWrongName,
 		serviceSelectorMismatch,
 		servicePortMismatch,
+		envKeyWrongName,
+		volumeMountWrongName,
+		jobSecretWrongName,
+		secretWrongNamespace,
+		ingressBackendWrongName,
+		ingressBackendWrongPort,
+		serviceStatefulSetPortMismatch,
+		pdbSelectorMismatch,
+		networkPolicySelectorMismatch,
 	}
 
 	var out []Scenario
@@ -87,7 +97,7 @@ func All() []Scenario {
 		out = append(out, build(false), build(true))
 	}
 
-	return append(out, healthyBundle())
+	return append(out, healthyBundle(), healthyWebStack(), healthyRBAC())
 }
 
 // maybeTwin returns s unchanged, or converts it into its healthy twin: the
@@ -982,6 +992,486 @@ func healthyBundle() Scenario {
 		Group:      GroupHealthy,
 		FaultClass: FaultNoFault,
 		YAML:       joinDocs(dep, cm, sec),
+	}
+}
+
+// envKeyWrongName is a Deployment whose env valueFrom configMapKeyRef points at
+// key "LOG_FORMAT", but the ConfigMap only has LOG_LEVEL and REGION — the key in
+// valueFrom the Ref_NotFound class description promises is now actually tested.
+// The ConfigMap name itself resolves; the key is the only anomaly.
+func envKeyWrongName(twin bool) Scenario {
+	envKey, status := "LOG_FORMAT", StatusFailing
+	if twin {
+		envKey, status = "LOG_LEVEL", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		EnvKey:        envKey,
+		EnvConfigMap:  "api-config",
+		ServerMeta:    srv("2d92b89e-beb7-4aaa-a0cb-c880c09705e8", "273161"),
+		Status:        status,
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: "api-config", Namespace: "production",
+		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		ServerMeta: srv("5f916cd0-725e-4848-a748-a18b9de3f865", "956022"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "env-key-wrong-name",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].env[].valueFrom.configMapKeyRef.key"},
+			// data is an atomic map (removed whole); with it gone the key set is
+			// unknown, so removal only hides the evidence that LOG_FORMAT is absent.
+			{Kind: "ConfigMap", Path: "data", Hides: true},
+		},
+		YAML: joinDocs(dep, cm),
+	})
+}
+
+// volumeMountWrongName is a Deployment whose container mounts volume
+// "cache-data", but the pod's only volume is named "data" — a dangling
+// reference INSIDE one document, no supporting object needed. Divergence type:
+// different compound word. Like the single-workload selector scenarios this is
+// admission-rejected on a live server, so the failing status is an as-if.
+func volumeMountWrongName(twin bool) Scenario {
+	mountName, status := "cache-data", StatusFailing
+	if twin {
+		mountName, status = "data", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		VolumeKind:    "pvc",
+		VolumeRef:     "api-cache",
+		MountName:     mountName,
+		ServerMeta:    srv("5dc74673-31ec-495b-a177-ce2315649347", "655755"),
+		Status:        status,
+	})
+
+	// The claim resolves and is Bound — the volume side is fully healthy.
+	pvc := NewPVC(PVCParams{
+		Name: "api-cache", Namespace: "production", App: "api", Storage: "5Gi",
+		ServerMeta: srv("70720f99-59e8-473b-a168-dda611c39913", "543351"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "volumemount-wrong-name",
+		Group:      GroupVolumes,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].volumeMounts[].name"},
+			{Kind: "Deployment", Path: "spec.template.spec.volumes[].name", Hides: true},
+		},
+		YAML: joinDocs(dep, pvc),
+	})
+}
+
+// jobSecretWrongName is a one-shot Job whose envFrom references secret
+// "db-credentials", but the Secret is named "db-secrets" — the same envFrom
+// Ref_NotFound as the Deployment case on a third workload Kind, giving
+// secretRef.name another cross-scenario appearance. Divergence type: different
+// word.
+func jobSecretWrongName(twin bool) Scenario {
+	secretName, status := "db-secrets", StatusFailing
+	if twin {
+		secretName, status = "db-credentials", StatusHealthy
+	}
+
+	job := NewJob(JobParams{
+		Name:          "db-migrate",
+		Namespace:     "production",
+		App:           "db-migrate",
+		PodApp:        "db-migrate",
+		ContainerName: "migrate",
+		Image:         "ghcr.io/acme/migrate:1.7.0",
+		SecretRef:     "db-credentials",
+		ServerMeta:    srv("1d691714-f8e4-42b6-a239-4f8c8899dcac", "625032"),
+		Status:        status,
+	})
+
+	sec := NewSecret(SecretParams{
+		Name:       secretName,
+		Namespace:  "production",
+		StringData: map[string]string{"DB_URL": "redacted-url", "DB_PASSWORD": "redacted-password"},
+		ServerMeta: srv("a4472299-7315-4113-a745-508741390046", "929471"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "job-secret-wrong-name",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Job", Path: "spec.template.spec.containers[].envFrom[].secretRef.name"},
+			{Kind: "Secret", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(job, sec),
+	})
+}
+
+// secretWrongNamespace is a Deployment in "production" referencing secret
+// "api-secret" — which exists, with exactly that name, but in namespace
+// "staging". The only anomaly is the namespace: tests whether the model reads
+// namespaces at all instead of just matching names.
+func secretWrongNamespace(twin bool) Scenario {
+	ns, status := "staging", StatusFailing
+	if twin {
+		ns, status = "production", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name:          "api",
+		Namespace:     "production",
+		App:           "api",
+		Replicas:      2,
+		SelectorApp:   "api",
+		PodApp:        "api",
+		ContainerName: "api",
+		Image:         "ghcr.io/acme/api:2.3.1",
+		ContainerPort: 8080,
+		SecretRef:     "api-secret",
+		ServerMeta:    srv("aa813e82-475b-4bb1-acf9-ac39d889e903", "854583"),
+		Status:        status,
+	})
+
+	sec := NewSecret(SecretParams{
+		Name:       "api-secret",
+		Namespace:  ns,
+		StringData: map[string]string{"API_KEY": "redacted-api-key"},
+		ServerMeta: srv("fa87051e-ebfd-430c-a0d4-6a5284344749", "244207"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "secret-wrong-namespace",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].secretRef.name"},
+			// Removing the namespace makes the Secret's location unknown — the
+			// reference into production still dangles under a strict reading.
+			{Kind: "Secret", Path: "metadata.namespace", Hides: true},
+		},
+		YAML: joinDocs(dep, sec),
+	})
+}
+
+// ingressBackendWrongName is an Ingress routing shop.example.com to backend
+// service "webapp", but the Service is named "web" — a dangling routing
+// reference (503 from the ingress controller). The Service and its Deployment
+// are fully healthy.
+func ingressBackendWrongName(twin bool) Scenario {
+	backend := "webapp"
+	if twin {
+		backend = "web"
+	}
+
+	ing := NewIngress(IngressParams{
+		Name: "web", Namespace: "production", App: "web",
+		Host: "shop.example.com", ServiceName: backend, ServicePort: 8080,
+		ServerMeta: srv("02e00d8a-4990-4642-a898-290e3db4c186", "939296"),
+		Status:     StatusHealthy, // the controller assigns an address either way
+	})
+
+	svc := NewService(ServiceParams{
+		Name: "web", Namespace: "production", App: "web",
+		SelectorApp: "web", Port: 8080, TargetPort: 8080,
+		ClusterIP:  "10.96.201.77",
+		ServerMeta: srv("6f747076-6128-4e48-a9d2-f6d74b5fd2ce", "407167"),
+		Status:     StatusHealthy,
+	})
+
+	dep := NewDeployment(DeploymentParams{
+		Name: "web", Namespace: "production", App: "web",
+		Replicas: 3, SelectorApp: "web", PodApp: "web",
+		ContainerName: "web", Image: "nginx:1.25", ContainerPort: 8080,
+		ServerMeta: srv("f681f5b0-52e8-400c-a386-4123d40a1836", "677343"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "ingress-backend-wrong-name",
+		Group:      GroupNetworking,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Ingress", Path: "spec.rules[].http.paths[].backend.service.name"},
+			{Kind: "Service", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(ing, svc, dep),
+	})
+}
+
+// ingressBackendWrongPort is an Ingress routing to the right Service but port
+// 9090, which the Service does not expose (it serves 8080 only) — PortMismatch
+// at the Ingress→Service hop. Everything else is consistent: the Ingress port
+// is the only anomaly, so removing it must restore health for the flip.
+func ingressBackendWrongPort(twin bool) Scenario {
+	port := 9090
+	if twin {
+		port = 8080
+	}
+
+	ing := NewIngress(IngressParams{
+		Name: "payments", Namespace: "production", App: "payments",
+		Host: "pay.example.com", ServiceName: "payments", ServicePort: port,
+		ServerMeta: srv("9d081258-9105-46a2-a673-ff495f5ef3d8", "212325"),
+		Status:     StatusHealthy,
+	})
+
+	svc := NewService(ServiceParams{
+		Name: "payments", Namespace: "production", App: "payments",
+		SelectorApp: "payments", Port: 8080, TargetPort: 8080,
+		ClusterIP:  "10.96.88.140",
+		ServerMeta: srv("331c0c9c-066c-418a-a7b7-785107243fa1", "745691"),
+		Status:     StatusHealthy,
+	})
+
+	dep := NewDeployment(DeploymentParams{
+		Name: "payments", Namespace: "production", App: "payments",
+		Replicas: 2, SelectorApp: "payments", PodApp: "payments",
+		ContainerName: "payments", Image: "ghcr.io/acme/payments:3.1.2", ContainerPort: 8080,
+		ServerMeta: srv("0ae5e556-3f65-4920-aded-747a33c1f802", "609399"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "ingress-backend-wrong-port",
+		Group:      GroupNetworking,
+		FaultClass: FaultPortMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "Ingress", Path: "spec.rules[].http.paths[].backend.service.port.number"},
+			{Kind: "Service", Path: "spec.ports[].port", Hides: true},
+		},
+		YAML: joinDocs(ing, svc, dep),
+	})
+}
+
+// serviceStatefulSetPortMismatch is a Service in front of a StatefulSet whose
+// targetPort has a transposition typo: 5423 instead of the containerPort 5432.
+// Second PortMismatch instance, on a different backing workload Kind and a
+// different divergence type (digit transposition).
+func serviceStatefulSetPortMismatch(twin bool) Scenario {
+	targetPort := 5423
+	if twin {
+		targetPort = 5432
+	}
+
+	svc := NewService(ServiceParams{
+		Name: "db", Namespace: "production", App: "db",
+		SelectorApp: "db", Port: 5432, TargetPort: targetPort,
+		ClusterIP:  "10.96.33.19",
+		ServerMeta: srv("7958ebdc-b368-4c86-aa1c-d75383d74d33", "840253"),
+		Status:     StatusHealthy,
+	})
+
+	sts := NewStatefulSet(StatefulSetParams{
+		Name: "db", Namespace: "production", App: "db",
+		Replicas: 3, SelectorApp: "db", PodApp: "db",
+		ContainerName: "db", Image: "postgres:16.2", ContainerPort: 5432,
+		ServerMeta: srv("1cdb7cd8-20b4-48c0-a7e2-6fec08d12bfe", "156743"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "service-statefulset-port-mismatch",
+		Group:      GroupNetworking,
+		FaultClass: FaultPortMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "Service", Path: "spec.ports[].targetPort"},
+			{Kind: "StatefulSet", Path: "spec.template.spec.containers[].ports[].containerPort", Hides: true},
+		},
+		YAML: joinDocs(svc, sts),
+	})
+}
+
+// pdbSelectorMismatch is a PodDisruptionBudget whose selector (app=webapp)
+// matches none of the Deployment's pods (app=web) — the budget silently
+// protects nothing, and voluntary disruptions can take down every replica.
+// The Deployment itself is healthy.
+func pdbSelectorMismatch(twin bool) Scenario {
+	selector, status := "webapp", StatusFailing
+	if twin {
+		selector, status = "web", StatusHealthy
+	}
+
+	pdb := NewPodDisruptionBudget(PDBParams{
+		Name: "web-pdb", Namespace: "production", App: "web",
+		MinAvailable: 2, SelectorApp: selector, Pods: 3,
+		ServerMeta: srv("a26c8548-8505-4ea5-ae81-4ba2cfba588f", "757331"),
+		Status:     status,
+	})
+
+	dep := NewDeployment(DeploymentParams{
+		Name: "web", Namespace: "production", App: "web",
+		Replicas: 3, SelectorApp: "web", PodApp: "web",
+		ContainerName: "web", Image: "nginx:1.25", ContainerPort: 8080,
+		ServerMeta: srv("9f427d10-5f2b-44e4-a9f5-0da7bfcd1b14", "535677"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "pdb-selector-mismatch",
+		Group:      GroupSelector,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "PodDisruptionBudget", Path: "spec.selector.matchLabels.app"},
+			{Kind: "Deployment", Path: "spec.template.metadata.labels.app", Hides: true},
+		},
+		YAML: joinDocs(pdb, dep),
+	})
+}
+
+// networkPolicySelectorMismatch is a NetworkPolicy whose podSelector
+// (app=storefront) matches none of the pods (app=web) — the intended isolation
+// applies to nothing. The from-selector targets the pods' own app, so the
+// selector under podSelector is the only anomaly. NetworkPolicy has no status;
+// the Deployment is healthy either way.
+func networkPolicySelectorMismatch(twin bool) Scenario {
+	selector := "storefront"
+	if twin {
+		selector = "web"
+	}
+
+	np := NewNetworkPolicy(NetworkPolicyParams{
+		Name: "web-allow", Namespace: "production", App: "web",
+		PodSelectorApp: selector, FromApp: "web", Port: 8080,
+		ServerMeta: srv("d5a0ad14-c48b-4bbf-afaf-e70915f53da9", "955789"),
+	})
+
+	dep := NewDeployment(DeploymentParams{
+		Name: "web", Namespace: "production", App: "web",
+		Replicas: 3, SelectorApp: "web", PodApp: "web",
+		ContainerName: "web", Image: "nginx:1.25", ContainerPort: 8080,
+		ServerMeta: srv("58aff64f-2c90-44a2-ab14-dec4e76d4511", "396296"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "networkpolicy-selector-mismatch",
+		Group:      GroupNetworking,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "NetworkPolicy", Path: "spec.podSelector.matchLabels.app"},
+			{Kind: "Deployment", Path: "spec.template.metadata.labels.app", Hides: true},
+		},
+		YAML: joinDocs(np, dep),
+	})
+}
+
+// roleBindingSubjectWrongName is a RoleBinding whose subject ServiceAccount
+// "api-sa" does not exist — the SA is named "api-account". The Role side is
+// fully healthy, which gives roleRef.name a non-deciding appearance for its
+// cross-scenario profile (deciding in rolebinding-role-wrong-name, noise here).
+func roleBindingSubjectWrongName(twin bool) Scenario {
+	saName := "api-account"
+	if twin {
+		saName = "api-sa"
+	}
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: saName, Namespace: "production", App: "api",
+		ServerMeta: srv("f829a1b1-065b-400b-aa8c-6b764dd4c4a7", "698259"),
+	})
+	role := NewRole(RoleParams{
+		Name: "pod-reader", Namespace: "production", App: "api",
+		ServerMeta: srv("d96c4ef8-664f-4493-a8c1-788682a980d0", "789978"),
+	})
+	rb := NewRoleBinding(RoleBindingParams{
+		Name: "api-read", Namespace: "production", App: "api",
+		ServiceAccountName: "api-sa", RoleName: "pod-reader",
+		ServerMeta: srv("028ad1e4-3df7-4d9c-aa61-78ef8797a5cd", "301994"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "rolebinding-subject-wrong-name",
+		Group:      GroupRBAC,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "RoleBinding", Path: "subjects[].name"},
+			{Kind: "ServiceAccount", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(rb, role, sa),
+	})
+}
+
+// healthyWebStack is a fully consistent Deployment+Service+HPA — a multi-Kind
+// shape no faulty scenario uses, so its false-positive rate (and its ablations
+// in Table 3b) probe a different surface than the twins do.
+func healthyWebStack() Scenario {
+	dep := NewDeployment(DeploymentParams{
+		Name: "shop", Namespace: "production", App: "shop",
+		Replicas: 3, SelectorApp: "shop", PodApp: "shop",
+		ContainerName: "shop", Image: "ghcr.io/acme/shop:5.2.0", ContainerPort: 8080,
+		ServerMeta: srv("745c73ac-78f1-490d-a1f0-bae2cd4aaf48", "153328"),
+		Status:     StatusHealthy,
+	})
+
+	svc := NewService(ServiceParams{
+		Name: "shop", Namespace: "production", App: "shop",
+		SelectorApp: "shop", Port: 8080, TargetPort: 8080,
+		ClusterIP:  "10.96.150.42",
+		ServerMeta: srv("408f9330-34f1-46ed-a3d8-32368e708fcf", "210666"),
+		Status:     StatusHealthy,
+	})
+
+	hpa := NewHPA(HPAParams{
+		Name: "shop", Namespace: "production", App: "shop",
+		TargetKind: "Deployment", TargetName: "shop", MinReplicas: 3, MaxReplicas: 12,
+		ServerMeta: srv("7ade4448-b334-4529-ad46-43a46e5facdb", "290943"),
+		Status:     StatusHealthy,
+	})
+
+	return Scenario{
+		Name:       "healthy-web-stack",
+		Group:      GroupHealthy,
+		FaultClass: FaultNoFault,
+		YAML:       joinDocs(dep, svc, hpa),
+	}
+}
+
+// healthyRBAC is a fully consistent ServiceAccount+Role+RoleBinding — the RBAC
+// shape with every reference resolving, probing the false-positive rate on a
+// Kind family where the 7B never diagnoses the injected faults.
+func healthyRBAC() Scenario {
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "reporting-sa", Namespace: "production", App: "reporting",
+		ServerMeta: srv("8b936310-ba4b-4226-a5cd-5aeecb36b4e5", "167029"),
+	})
+	role := NewRole(RoleParams{
+		Name: "report-reader", Namespace: "production", App: "reporting",
+		ServerMeta: srv("e1f1318b-ef26-408a-accd-37834a24ec08", "595617"),
+	})
+	rb := NewRoleBinding(RoleBindingParams{
+		Name: "reporting-read", Namespace: "production", App: "reporting",
+		ServiceAccountName: "reporting-sa", RoleName: "report-reader",
+		ServerMeta: srv("60253c83-8ff3-4d4f-a55e-de858f76accf", "944830"),
+	})
+
+	return Scenario{
+		Name:       "healthy-rbac",
+		Group:      GroupHealthy,
+		FaultClass: FaultNoFault,
+		YAML:       joinDocs(rb, role, sa),
 	}
 }
 

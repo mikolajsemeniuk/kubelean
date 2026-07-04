@@ -47,8 +47,51 @@ levels) is not yet.
 - **`reduce()` — NOT STARTED.** It will wrap the same field-remover kernel and load
   m3's level→field-keys config. The kernel (`heatmap.Remove`) already exists.
 
-Catalog right now: **19 faulty scenarios + 19 healthy twins + 1 healthy control,
-4 fault classes, 7 run-groups, 31 Kinds.**
+Catalog right now: **29 faulty scenarios (19 Ref\_NotFound / 7 SelectorMismatch /
+3 PortMismatch) + 29 healthy twins + 3 healthy controls = 61 entries, ~1700
+variants; 7 run-groups, 31 Kinds** (21 Kinds appear in scenarios — incl. Job,
+Ingress, NetworkPolicy, PDB since 2026-07). Class-balance rules that produced
+these numbers: every class ≥3–5 scenarios; the scored set must not be >50% one
+class (or a constant classifier inflates baselines); every field-key that m3 will
+claim anything about needs ≥2 scenarios where it is non-deciding (the
+cross-scenario profile — e.g. rolebinding-subject-wrong-name exists mainly to give
+roleRef.name a non-deciding appearance).
+
+### Next steps (queued — read before doing anything else)
+
+1. **The paper run is armed and waiting.** The final catalog (61 scenarios, ~1700
+   variants) is smoke-validated at k=3; the user launches the run themselves:
+   `make clean-data && make run-all K=40` (or group by group: `make run-<group> K=40`,
+   resumable — each scenario's shard is written on completion, so a crash costs at
+   most the in-flight scenario; rerunning a group overwrites only that group).
+   `make clean-data` first is REQUIRED: `data/qwen2.5-7b-instruct/` currently mixes
+   2 fresh K=40 shards (selector-label-mismatch + twin, from an aborted run) with 17
+   stale pre-catalog shards — rendering that mix would silently blend two different
+   YAML generations. Measured pace: ~15 min per faulty scenario at K=40 (~0.6 s/call
+   on qwen-7b), whole run ≈ 10–12 h. Afterwards: `make render`.
+2. **Three renderer artifacts are still TODO** (pure cmd/render work, no model
+   calls — can be built and tested against whatever shards exist):
+   - `fieldprofile.gen.tex` — the per-field-key aggregate across scenarios: in how
+     many scenarios each canonical field-key was measured, how often it was a
+     deciding locus, and its saliency distribution (mean/min/max + how many cells
+     were BH-signal) where it was NON-deciding. This is the direct input for m3
+     (levels group field-keys, not cells) and the main defense against the
+     circularity critique (a field's *marginal* signal across scenarios, independent
+     of where we injected the fault).
+   - `power.gen.tex` — the auto-computed statistical-power paragraph: k, number of
+     map cells m, FDR level, the minimal detectable effect at 80% power under the
+     seed-paired McNemar + BH rule (lone-signal worst case: needs ≥⌈log2(2m/0.05)⌉
+     one-sided discordant seeds), and the upper Newcombe bound on saliency for
+     cells declared "noise". Keeps the paper's power claims always consistent with
+     the data.
+   - `categories.gen.tex` — the scalar / atomic-map / seq-elem stratification: the
+     Category is recorded on every reduced trial and the ablate.go docs promise the
+     three kinds are "separate populations", but no table shows them. Per category:
+     cell count, saliency distribution, signal count, mean healthy-bundle FP.
+3. After the 7B run renders clean: the **multi-model run** (`make run-all K=40
+   MODEL=qwen2.5:32b-instruct` etc.) — the per-model data/paper isolation is already
+   in place; it un-gates the scenarios 7B cannot diagnose (RBAC, HPA/VPA, storage,
+   most of the new coverage) and is the paper's answer to "is this just the model?".
 
 **Load-bearing reality — read this before adding scenarios:** the RCA model is a small
 local model (qwen2.5:7b-instruct via Ollama). It reliably diagnoses only a *subset* of

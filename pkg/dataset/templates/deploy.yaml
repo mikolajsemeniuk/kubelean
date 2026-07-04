@@ -71,8 +71,16 @@ spec:
               {{- end }}
           {{- if .VolumeRef }}
           volumeMounts:
-            - name: data
+            - name: {{ .MountName }}
               mountPath: /data
+          {{- end }}
+          {{- if .EnvKey }}
+          env:
+            - name: {{ .EnvKey }}
+              valueFrom:
+                configMapKeyRef:
+                  key: {{ .EnvKey }}
+                  name: {{ .EnvConfigMap }}
           {{- end }}
           {{- if or .ConfigMapRef .SecretRef }}
           envFrom:

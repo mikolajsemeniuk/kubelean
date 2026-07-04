@@ -1,14 +1,35 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
+  {{- if .Created }}
+  creationTimestamp: "{{ .Created }}"
+  {{- end }}
+  {{- if .Generation }}
+  generation: {{ .Generation }}
+  {{- end }}
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     app: {{ .App }}
+  {{- if .ResourceVersion }}
+  resourceVersion: "{{ .ResourceVersion }}"
+  {{- end }}
+  {{- if .UID }}
+  uid: {{ .UID }}
+  {{- end }}
 spec:
   backoffLimit: 4
+  {{- if .Created }}
+  completionMode: NonIndexed
+  completions: 1
+  parallelism: 1
+  suspend: false
+  {{- end }}
   template:
     metadata:
+      {{- if .Created }}
+      creationTimestamp: null
+      {{- end }}
       labels:
         app: {{ .PodApp }}
     spec:
@@ -16,3 +37,37 @@ spec:
       containers:
         - name: {{ .ContainerName }}
           image: {{ .Image }}
+          {{- if .Created }}
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          {{- end }}
+          {{- if .SecretRef }}
+          envFrom:
+            - secretRef:
+                name: {{ .SecretRef }}
+          {{- end }}
+      {{- if .Created }}
+      dnsPolicy: ClusterFirst
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      {{- end }}
+{{- if eq .Status "healthy" }}
+status:
+  completionTime: "{{ .Created }}"
+  conditions:
+    - lastProbeTime: "{{ .Created }}"
+      lastTransitionTime: "{{ .Created }}"
+      status: "True"
+      type: Complete
+  ready: 0
+  startTime: "{{ .Created }}"
+  succeeded: 1
+{{- else if eq .Status "failing" }}
+status:
+  active: 1
+  ready: 0
+  startTime: "{{ .Created }}"
+{{- end }}

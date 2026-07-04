@@ -12,10 +12,12 @@ type IngressParams struct {
 	Name         string
 	Namespace    string
 	App          string
-	IngressClass string
+	IngressClass string // optional: spec.ingressClassName ("" omits it — the default class)
 	Host         string
 	ServiceName  string // spec.rules[].http.paths[].backend.service.name
 	ServicePort  int
+	ServerMeta          // optional: server-assigned metadata (kubectl get shape)
+	Status       string // optional: any non-empty value renders the controller-assigned status
 }
 
 //go:embed templates/ingress.yaml

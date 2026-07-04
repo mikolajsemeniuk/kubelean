@@ -25,8 +25,11 @@ type Fault struct {
 // schema enum is built from the names, the prompt from name + description.
 var faults = []Fault{
 	{FaultRefNotFound, "a name reference (secretRef.name, configMapRef.name, a key in valueFrom, a volume claimName, or serviceAccountName) points to an object or key that is not present in the manifests"},
-	{FaultSelectorMismatch, "the key/value pairs under spec.selector.matchLabels are not identical to those under spec.template.metadata.labels (compare each value, not just the keys), or a Service spec.selector does not equal the pod labels"},
-	{FaultPortMismatch, "a Service's spec.ports targetPort does not equal the containerPort exposed by the pods its selector matches, so connections to the Service reach a port where nothing is listening"},
+	// Both selector/port descriptions were widened 2026-07 for the Ingress/PDB/
+	// NetworkPolicy scenarios; descriptions are fragile (see lessons) — any
+	// further edit needs a make smoke before a full run.
+	{FaultSelectorMismatch, "the key/value pairs under spec.selector.matchLabels are not identical to those under spec.template.metadata.labels (compare each value, not just the keys), or a selector on another object (a Service spec.selector, a PodDisruptionBudget or NetworkPolicy matchLabels) does not equal the labels of the pods it targets"},
+	{FaultPortMismatch, "a Service's spec.ports targetPort does not equal the containerPort exposed by the pods its selector matches, or an Ingress backend port number does not equal any port of the Service it routes to — connections reach a port where nothing is listening"},
 	// The closing clause matters for the flip: manifests now carry status blocks,
 	// so after a deciding field is removed the symptoms (unavailable replicas)
 	// remain while the root cause is gone — NoFaultFound must mean "no root cause

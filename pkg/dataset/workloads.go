@@ -42,6 +42,9 @@ type JobParams struct {
 	PodApp        string
 	ContainerName string
 	Image         string
+	SecretRef     string // optional: envFrom secretRef name ("" omits it)
+	ServerMeta           // optional: server-assigned metadata (kubectl get shape)
+	Status        string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
 
 //go:embed templates/job.yaml

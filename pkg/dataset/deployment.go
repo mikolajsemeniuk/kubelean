@@ -29,6 +29,9 @@ type DeploymentParams struct {
 	SecretRef          string // optional: envFrom secretRef name ("" omits it)
 	VolumeKind         string // optional: volume source — "pvc" | "configMap" | "secret"
 	VolumeRef          string // optional: the referenced name ("" omits the volume)
+	MountName          string // optional: volumeMounts[].name ("" defaults to "data", the volumes[].name)
+	EnvKey             string // optional: env[].valueFrom.configMapKeyRef.key ("" omits the env block)
+	EnvConfigMap       string // optional: env[].valueFrom.configMapKeyRef.name
 	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
 	Status             string // optional: StatusHealthy | StatusFailing ("" omits status)
 }
@@ -38,7 +41,12 @@ var deployYAML string
 
 var deploymentTemplate = template.Must(template.New("deploy").Parse(deployYAML))
 
-// NewDeployment renders a Deployment manifest from the given params.
+// NewDeployment renders a Deployment manifest from the given params. MountName
+// defaults to "data" (the volumes[].name) so existing callers render unchanged;
+// a divergent MountName is the volumeMount→volume dangling-reference fault.
 func NewDeployment(p DeploymentParams) string {
+	if p.MountName == "" {
+		p.MountName = "data"
+	}
 	return mustRender(deploymentTemplate, p)
 }

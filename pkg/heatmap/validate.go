@@ -74,6 +74,23 @@ var requiredPaths = map[string][]string{
 		"/metadata/name",
 		"/value",
 	},
+	"Job": {
+		"/metadata/name",
+		"/spec/template/spec/containers/[]/name",
+		"/spec/template/spec/containers/[]/image",
+	},
+	"Ingress": {
+		"/metadata/name",
+		"/spec/rules/[]/http/paths/[]/backend/service/name",
+	},
+	"NetworkPolicy": {
+		"/metadata/name",
+		"/spec/podSelector",
+	},
+	"PodDisruptionBudget": {
+		"/metadata/name",
+		"/spec/selector",
+	},
 	"Role": {"/metadata/name"},
 	"RoleBinding": {
 		"/metadata/name",
