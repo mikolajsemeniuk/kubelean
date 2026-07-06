@@ -76,20 +76,26 @@ itself a controlled context-dilution measurement worth a paper paragraph.
 
 ### Next steps (queued — read before doing anything else)
 
-1. **The 7B paper run is DONE (2026-07-03, K=40) and rendered.** Headline results:
-   only 7 of 29 faulty scenarios clear the (now dual) gate — 4 Ref_NotFound + all
-   3 PortMismatch, zero SelectorMismatch — and after the negative-control floor
-   only 5 saliency cells survive as signal (the two cross-sibling reference names
-   on top). The old "PortMismatch parked" claim is DEAD WRONG at K=40: the three
-   port scenarios are the strongest class (baselines 1.00, twin J 0.82–1.00).
-   **2026-07-04 changes make the NEXT produce run a mandatory FULL re-run** (never
-   mix with the 2026-07-03 shards): the Ref_NotFound description in faults.go was
-   broadened (prompt change ⇒ every scenario's prompt changed), and two scenarios
-   were regenerated — statefulset-selector-mismatch (dangling spec.serviceName
-   fixed: governing headless Service added, anomaly moved into the selector) and
-   env-key-wrong-name (env[].name decoupled from the key via EnvName so the var
-   name no longer echoes the missing key). Both pairs' 2026-07-03 shards are
-   stale-but-gated, so the current render stays honest; smoke before the re-run.
+1. **The 7B paper run v2 (broadened prompt, 2026-07-04/06, K=40) is DONE and
+   rendered.** Headline: 10 of 33 faulty scenarios scored, finally class-balanced
+   (5 Ref / 2 Selector / 3 Port) — the broadened Ref_NotFound description
+   un-gated RBAC/storage/PDB (rolebinding-role 0.00→0.97), proving the old
+   zeros were prompt asymmetry, not model incapacity. The checklist's price,
+   both measured: healthy FP up (controls 1.00→0.88–0.90, secret-ref twin
+   0.82→0.35, imagepull J=−0.12) and destabilization up — negative-control
+   floors hit 0.85–0.90 on RBAC scenarios, hence the fragility gate (signals
+   20→2: PDB kind/apiVersion; ports stay the clean case: floors 0.00, J=1.00).
+   All four crowded scenarios gated on baseline as predicted — the dilution
+   pairs are now quantified (secret-ref 0.90→0.35, service-port 1.00→0.17).
+   2026-07-06 realism fixes (pull secrets kubernetes.io/dockerconfigjson,
+   StorageClass Immediate, resources.requests under the HPA targets) changed
+   the YAML of 5 bundles (imagepull, storageclass, hpa-target pairs,
+   service-port-crowded pair, healthy-web-stack) — their v2 shards are
+   PRE-FIX and stale until the next full run (`make clean-data && make
+   run-all K=40`, planned on the new inference box). The prompt-v1 K=40 data
+   (2026-07-03) was deleted by clean-data before v2 — from now on COMMIT
+   data/ + paper/ after every paper run so prompt-generation comparisons stay
+   reproducible.
 2. **Two renderer artifacts are still TODO** (pure cmd/render work, no model
    calls — can be built and tested against whatever shards exist).
    DONE 2026-07-04 (cmd/render/figures.go, unit-tested): `fieldprofile.gen.tex`
@@ -241,6 +247,15 @@ model. This split is mandated — see "measurement contract".
   Rationale: Table 3b cannot floor this (healthy bundles have no marginal diagnosis
   to knock off — their FP is ~0 while faulty-scenario destabilization is huge). At
   K=40 this cut the signal cells from 24 to 5.
+- **the fragility gate (2026-07-06)** — the floor caps destabilization per FIELD,
+  but the K=40-v2 run showed it fails per SCENARIO: on the newly un-gated RBAC
+  scenarios the floor itself hit 0.85–0.90 (removing a TIMESTAMP kills 90% of
+  diagnoses), and semantically-adjacent fields destabilize even harder than
+  timestamps, so BH-passing cells leaked through. Rule: when a scenario's floor
+  exceeds `-fragile` (default 0.3), every BH-passing cell renders as `fragile`
+  instead of `signal` — the scenario's map is destabilization-dominated and no
+  cell in it is attributable to information. On K=40-v2 this cut signals 20 → 2
+  (PDB kind/apiVersion, floor 0.03 — document identity). cmd/viewer mirrors it.
 - **level / class (L1, L2, …)** — a group of field-keys with a saliency threshold,
   discovered from the heatmap in m3. Not decided up front.
 - **group** — a batch key for producing related scenarios together (`make run-<group>`):

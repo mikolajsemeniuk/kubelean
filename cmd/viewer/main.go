@@ -44,6 +44,7 @@ func main() {
 	in := flag.String("in", "data", "root directory of JSONL shards (a per-model subdirectory is appended)")
 	model := flag.String("model", "qwen2.5:7b-instruct", "model whose shards to browse — selects data/<model>/")
 	gate := flag.Float64("gate", 0.8, "min baseline accuracy for a faulty scenario to be scored (mirrors cmd/render)")
+	fragileMax := flag.Float64("fragile", 0.3, "max negative-control floor for signal eligibility (mirrors cmd/render)")
 	addr := flag.String("addr", ":8080", "listen address")
 	flag.Parse()
 
@@ -51,7 +52,7 @@ func main() {
 
 	serve := func(render func(io.Writer, *view, *http.Request)) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			v, err := load(dir, *gate)
+			v, err := load(dir, *gate, *fragileMax)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -101,6 +102,7 @@ type view struct {
 	isTwin     map[string]bool
 	gated      map[string]string // scenario → reason ("" = scored)
 	floor      map[string]float64
+	fragileMax float64
 }
 
 const fdrLevel = 0.05
@@ -109,8 +111,10 @@ func (v *view) saliency(c *cell) float64 {
 	return frac(v.baseHit[c.scenario], v.baseTot[c.scenario]) - frac(c.matchFault, c.total)
 }
 
-// verdict mirrors cmd/render: control / signal / destab / no. Deciding cells
-// and cells of unscored scenarios always come back "no" (they are not tested).
+// verdict mirrors cmd/render: control / signal / fragile / destab / no.
+// Deciding cells and cells of unscored scenarios always come back "no" (they
+// are not tested). "fragile" = would be signal, but the scenario's own floor
+// exceeds fragileMax, so the whole map is destabilization-dominated there.
 func (v *view) verdict(c *cell) string {
 	if negControl(c.field) {
 		return "control"
@@ -118,13 +122,16 @@ func (v *view) verdict(c *cell) string {
 	if !c.tested || c.q > fdrLevel {
 		return "no"
 	}
-	if v.saliency(c) > v.floor[c.scenario] {
-		return "signal"
+	if v.saliency(c) <= v.floor[c.scenario] {
+		return "destab"
 	}
-	return "destab"
+	if v.floor[c.scenario] > v.fragileMax {
+		return "fragile"
+	}
+	return "signal"
 }
 
-func load(dir string, gate float64) (*view, error) {
+func load(dir string, gate, fragileMax float64) (*view, error) {
 	recs, err := readShards(dir)
 	if err != nil {
 		return nil, err
@@ -151,6 +158,7 @@ func load(dir string, gate float64) (*view, error) {
 		isTwin:     map[string]bool{},
 		gated:      map[string]string{},
 		floor:      map[string]float64{},
+		fragileMax: fragileMax,
 	}
 	for _, s := range dataset.All() {
 		if s.TwinOf != "" {
@@ -685,7 +693,7 @@ func legend(w io.Writer) {
 	fmt.Fprintf(w, `<div class=legend>
  verdict per cell (same rule as the paper: seed-paired McNemar + BH q ≤ %.2f, then the negative-control floor):
  <span class=sw style="background:%s"></span> <b>signal</b> (orange, deeper = higher saliency)
- <span class=sw style="background:%s"></span><span class=sw style="background:%s"></span> no signal / destab (grey, darker = higher raw saliency)
+ <span class=sw style="background:%s"></span><span class=sw style="background:%s"></span> no signal / destab / fragile (grey, darker = higher raw saliency; "fragile" = the scenario's own floor is too high for any signal claim)
  <span class="sw ctl" style="background:%s"></span> negative control (defines the floor)
  <span class=sw style="background:#334155"></span> * deciding locus (injected fault, never scored)
  &nbsp;·&nbsp; hover any cell for b/c/q evidence &nbsp;·&nbsp; reload to refresh

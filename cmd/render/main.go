@@ -66,6 +66,7 @@ func main() {
 	out := flag.String("out", "paper", "root output directory (a per-model subdirectory is appended)")
 	model := flag.String("model", "qwen2.5:7b-instruct", "model whose shards to render — selects data/<model>/ and paper/<model>/")
 	gate := flag.Float64("gate", 0.8, "min baseline accuracy for a faulty scenario to be scored (m2 #12 gate)")
+	fragileMax := flag.Float64("fragile", 0.3, "max negative-control floor for a scenario's cells to be eligible as signal; above it every BH-passing cell renders as 'fragile' (destabilization-dominated scenario)")
 	flag.Parse()
 
 	// Shards and artifacts are namespaced per model so a second model's run
@@ -267,9 +268,12 @@ func main() {
 	}
 	// verdict is the per-cell decision: "control" (negative-control field,
 	// ineligible as signal by construction), "signal" (BH q ≤ fdr AND saliency
-	// above the scenario's fragility floor), "destab" (clears BH but not the
-	// floor — statistically real, but indistinguishable from destabilization),
-	// or "no". Only "signal" is bolded.
+	// above the scenario's fragility floor AND the floor itself is low),
+	// "fragile" (would be signal, but the scenario's floor exceeds -fragile:
+	// when removing a TIMESTAMP knocks off 30%+ of diagnoses, no cell in that
+	// scenario can be attributed to information rather than destabilization —
+	// the K=40 run showed floors up to 0.90 on the RBAC scenarios), "destab"
+	// (clears BH but not the floor), or "no". Only "signal" is bolded.
 	verdict := func(key string) string {
 		c := cells[key]
 		if negControl(c.field) {
@@ -279,10 +283,13 @@ func main() {
 		if s == nil || s.q > fdr {
 			return "no"
 		}
-		if frac(baseCorrect[c.scenario], baseTotal[c.scenario])-frac(c.matchFault, c.total) > floor[c.scenario] {
-			return "signal"
+		if frac(baseCorrect[c.scenario], baseTotal[c.scenario])-frac(c.matchFault, c.total) <= floor[c.scenario] {
+			return "destab"
 		}
-		return "destab"
+		if floor[c.scenario] > *fragileMax {
+			return "fragile"
+		}
+		return "signal"
 	}
 	signal := func(key string) bool { return verdict(key) == "signal" }
 
@@ -297,8 +304,9 @@ func main() {
 	b.WriteString("% − reduced accuracy, each a fraction over the cell's trials. Bold = signal:\n")
 	fmt.Fprintf(&b, "%% seed-paired exact McNemar, Benjamini–Hochberg q <= %.2f across the %d\n", fdr, len(sigKeys))
 	b.WriteString("% cells of the map, AND saliency above the scenario's negative-control\n")
-	b.WriteString("% fragility floor (see fdr.gen.tex); see confidence.gen.tex for CIs, p, q\n")
-	b.WriteString("% and per-cell verdicts. Valid is a covariate, not a gate.\n")
+	fmt.Fprintf(&b, "%% fragility floor, AND that floor <= %.2f (see fdr.gen.tex); see\n", *fragileMax)
+	b.WriteString("% confidence.gen.tex for CIs, p, q and per-cell verdicts. Valid is a\n")
+	b.WriteString("% covariate, not a gate.\n")
 	b.WriteString("\\begin{tabular}{lllcr}\n\\toprule\nScenario & Kind & Field & Valid & Saliency \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
@@ -518,7 +526,7 @@ func main() {
 	ci.WriteString("% \\input-able fragment; requires \\usepackage{booktabs}.\n")
 	fmt.Fprintf(&ci, "%% model: %s @ %s ; k=%d ; temp=%.2f ; num_ctx=%d\n", meta.Model, meta.ModelDigest, meta.K, meta.Temp, meta.NumCtx)
 
-	fmt.Fprintf(&ci, "%% Table A — saliency with 95%% CI (non-deciding fields). Verdict: signal =\n%% BH q <= %.2f AND saliency above the scenario's negative-control fragility\n%% floor; destab = clears BH only; control = a-priori bookkeeping field\n%% (ineligible as signal, defines the floor). Full evidence in fdr.gen.tex.\n", fdr)
+	fmt.Fprintf(&ci, "%% Table A — saliency with 95%% CI (non-deciding fields). Verdict: signal =\n%% BH q <= %.2f AND saliency above the scenario's negative-control fragility\n%% floor AND floor <= %.2f; fragile = the scenario's floor exceeds that bound\n%% (destabilization-dominated); destab = clears BH only; control = a-priori\n%% bookkeeping field (ineligible as signal, defines the floor). Full evidence\n%% in fdr.gen.tex.\n", fdr, *fragileMax)
 	ci.WriteString("\\begin{tabular}{lllrcc}\n\\toprule\nScenario & Kind & Field & Saliency & 95\\% CI & Verdict \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
@@ -626,8 +634,11 @@ func main() {
 	fd.WriteString("% the max saliency over its negative-control cells (server bookkeeping\n")
 	fd.WriteString("% fields, verdict \"control\" — by construction they carry no diagnostic\n")
 	fd.WriteString("% signal, so what they show is removal-induced destabilization, lesson 8).\n")
-	fd.WriteString("% Verdict: signal = q <= FDR and saliency > floor (bold); destab = clears\n")
-	fd.WriteString("% BH but not the floor. Rows sorted by evidence strength.\n")
+	fd.WriteString("% Verdict: signal = q <= FDR and saliency > floor AND the floor itself is\n")
+	fmt.Fprintf(&fd, "%% low (<= %.2f); fragile = would be signal but the scenario's floor exceeds\n", *fragileMax)
+	fd.WriteString("% that bound — the scenario is destabilization-dominated and none of its\n")
+	fd.WriteString("% cells is attributable to information; destab = clears BH but not the\n")
+	fd.WriteString("% floor. Rows sorted by evidence strength.\n")
 	fmt.Fprintf(&fd, "%% m = %d cells tested; FDR level %.2f; signal cells: %d.\n", len(sigKeys), fdr, nSignal)
 	fd.WriteString("% \\input-able fragment; requires \\usepackage{booktabs}.\n")
 	fmt.Fprintf(&fd, "%% model: %s @ %s ; k=%d ; temp=%.2f ; num_ctx=%d\n", meta.Model, meta.ModelDigest, meta.K, meta.Temp, meta.NumCtx)

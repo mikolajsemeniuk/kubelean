@@ -5,19 +5,22 @@
 % the max saliency over its negative-control cells (server bookkeeping
 % fields, verdict "control" — by construction they carry no diagnostic
 % signal, so what they show is removal-induced destabilization, lesson 8).
-% Verdict: signal = q <= FDR and saliency > floor (bold); destab = clears
-% BH but not the floor. Rows sorted by evidence strength.
-% m = 510 cells tested; FDR level 0.05; signal cells: 20.
+% Verdict: signal = q <= FDR and saliency > floor AND the floor itself is
+% low (<= 0.30); fragile = would be signal but the scenario's floor exceeds
+% that bound — the scenario is destabilization-dominated and none of its
+% cells is attributable to information; destab = clears BH but not the
+% floor. Rows sorted by evidence strength.
+% m = 510 cells tested; FDR level 0.05; signal cells: 2.
 % \input-able fragment; requires \usepackage{booktabs}.
 % model: qwen2.5:7b-instruct @ 845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e ; k=40 ; temp=0.70 ; num_ctx=8192
 \begin{tabular}{lllrrrrrrc}
 \toprule
 Scenario & Kind & Field & Saliency & b & c & p & q & Floor & Verdict \\
 \midrule
-rolebinding-role-wrong-name & RoleBinding & \textbf{\texttt{/kind}} & 0.95 & 38 & 0 & 0.000 & 0.000 & 0.90 & signal \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/kind} & 0.95 & 38 & 0 & 0.000 & 0.000 & 0.90 & fragile \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/creationTimestamp} & 0.90 & 36 & 0 & 0.000 & 0.000 & 0.90 & control \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/metadata/labels}} & 0.88 & 35 & 0 & 0.000 & 0.000 & 0.42 & signal \\
-storageclass-wrong-name & PersistentVolumeClaim & \textbf{\texttt{/status/phase}} & 0.82 & 33 & 0 & 0.000 & 0.000 & 0.47 & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/labels} & 0.88 & 35 & 0 & 0.000 & 0.000 & 0.42 & fragile \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/status/phase} & 0.82 & 33 & 0 & 0.000 & 0.000 & 0.47 & fragile \\
 rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/creationTimestamp} & 0.72 & 29 & 0 & 0.000 & 0.000 & 0.90 & control \\
 serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.85 & 37 & 3 & 0.000 & 0.000 & 0.85 & control \\
 serviceaccount-wrong-name & ServiceAccount & \texttt{/apiVersion} & 0.85 & 37 & 3 & 0.000 & 0.000 & 0.85 & destab \\
@@ -33,21 +36,21 @@ serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/
 serviceaccount-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.73 & 32 & 3 & 0.000 & 0.000 & 0.85 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.73 & 32 & 3 & 0.000 & 0.000 & 0.85 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.70 & 31 & 3 & 0.000 & 0.000 & 0.85 & control \\
-storageclass-wrong-name & PersistentVolumeClaim & \textbf{\texttt{/kind}} & 0.72 & 33 & 4 & 0.000 & 0.000 & 0.47 & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/currentReplicas}} & 0.75 & 35 & 5 & 0.000 & 0.000 & 0.42 & signal \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/kind} & 0.72 & 33 & 4 & 0.000 & 0.000 & 0.47 & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/currentReplicas} & 0.75 & 35 & 5 & 0.000 & 0.000 & 0.42 & fragile \\
 rolebinding-role-wrong-name & Role & \texttt{/metadata/uid} & 0.57 & 24 & 1 & 0.000 & 0.000 & 0.90 & control \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/containers/*/imagePullPolicy}} & 0.72 & 34 & 5 & 0.000 & 0.000 & 0.42 & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/schedulerName}} & 0.72 & 34 & 5 & 0.000 & 0.000 & 0.42 & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/collisionCount}} & 0.72 & 34 & 5 & 0.000 & 0.000 & 0.42 & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/containers/*/terminationMessagePolicy}} & 0.70 & 33 & 5 & 0.000 & 0.000 & 0.42 & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.72 & 34 & 5 & 0.000 & 0.000 & 0.42 & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/schedulerName} & 0.72 & 34 & 5 & 0.000 & 0.000 & 0.42 & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/collisionCount} & 0.72 & 34 & 5 & 0.000 & 0.000 & 0.42 & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.70 & 33 & 5 & 0.000 & 0.000 & 0.42 & fragile \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.62 & 28 & 3 & 0.000 & 0.000 & 0.85 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.62 & 28 & 3 & 0.000 & 0.000 & 0.85 & destab \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/schedulerName}} & 0.60 & 27 & 3 & 0.000 & 0.000 & 0.57 & signal \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.60 & 27 & 3 & 0.000 & 0.000 & 0.57 & fragile \\
 configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.57 & 26 & 3 & 0.000 & 0.000 & 0.57 & control \\
 secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.57 & 26 & 3 & 0.000 & 0.000 & 0.57 & control \\
 serviceaccount-wrong-name & Deployment & \texttt{/metadata/labels} & 0.58 & 26 & 3 & 0.000 & 0.000 & 0.85 & destab \\
 configmap-ref-wrong-name & Deployment & \texttt{/metadata/annotations} & 0.53 & 23 & 2 & 0.000 & 0.000 & 0.57 & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/dnsPolicy}} & 0.62 & 30 & 5 & 0.000 & 0.000 & 0.42 & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/dnsPolicy} & 0.62 & 30 & 5 & 0.000 & 0.000 & 0.42 & fragile \\
 secret-ref-wrong-name & Deployment & \texttt{/metadata/annotations} & 0.57 & 27 & 4 & 0.000 & 0.000 & 0.57 & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.57 & 27 & 4 & 0.000 & 0.000 & 0.57 & destab \\
 pdb-selector-mismatch & PodDisruptionBudget & \textbf{\texttt{/kind}} & 0.60 & 29 & 5 & 0.000 & 0.001 & 0.03 & signal \\
@@ -56,12 +59,12 @@ serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/
 configmap-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & 0.38 & 15 & 0 & 0.000 & 0.001 & 0.57 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/strategy/type} & 0.38 & 15 & 0 & 0.000 & 0.001 & 0.85 & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.50 & 23 & 3 & 0.000 & 0.001 & 0.57 & destab \\
-statefulset-selector-mismatch & Service & \textbf{\texttt{/spec/selector}} & 0.55 & 27 & 5 & 0.000 & 0.001 & 0.42 & signal \\
+statefulset-selector-mismatch & Service & \texttt{/spec/selector} & 0.55 & 27 & 5 & 0.000 & 0.001 & 0.42 & fragile \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.35 & 14 & 0 & 0.000 & 0.001 & 0.57 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.35 & 14 & 0 & 0.000 & 0.001 & 0.85 & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/metadata/labels} & 0.50 & 24 & 4 & 0.000 & 0.002 & 0.57 & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.50 & 24 & 4 & 0.000 & 0.002 & 0.57 & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/availableReplicas}} & 0.53 & 26 & 5 & 0.000 & 0.002 & 0.42 & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/availableReplicas} & 0.53 & 26 & 5 & 0.000 & 0.002 & 0.42 & fragile \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.33 & 13 & 0 & 0.000 & 0.002 & 0.57 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/replicas} & 0.33 & 13 & 0 & 0.000 & 0.002 & 0.85 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.33 & 13 & 0 & 0.000 & 0.002 & 0.85 & destab \\
@@ -73,13 +76,13 @@ serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/type} & 0.
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/namespace} & 0.30 & 12 & 0 & 0.000 & 0.004 & 0.42 & destab \\
 serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.35 & 15 & 1 & 0.001 & 0.005 & 0.85 & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & 0.45 & 22 & 4 & 0.001 & 0.005 & 0.57 & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/restartPolicy}} & 0.47 & 24 & 5 & 0.001 & 0.005 & 0.42 & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/readyReplicas}} & 0.47 & 24 & 5 & 0.001 & 0.005 & 0.42 & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/restartPolicy} & 0.47 & 24 & 5 & 0.001 & 0.005 & 0.42 & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/readyReplicas} & 0.47 & 24 & 5 & 0.001 & 0.005 & 0.42 & fragile \\
 storageclass-wrong-name & StorageClass & \texttt{/metadata/creationTimestamp} & 0.47 & 25 & 6 & 0.001 & 0.007 & 0.47 & control \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.43 & 21 & 4 & 0.001 & 0.007 & 0.57 & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/terminationGracePeriodSeconds}} & 0.45 & 23 & 5 & 0.001 & 0.007 & 0.42 & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/updateStrategy/rollingUpdate/partition}} & 0.45 & 23 & 5 & 0.001 & 0.007 & 0.42 & signal \\
-statefulset-selector-mismatch & Service & \textbf{\texttt{/apiVersion}} & 0.45 & 23 & 5 & 0.001 & 0.007 & 0.42 & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.45 & 23 & 5 & 0.001 & 0.007 & 0.42 & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/updateStrategy/rollingUpdate/partition} & 0.45 & 23 & 5 & 0.001 & 0.007 & 0.42 & fragile \\
+statefulset-selector-mismatch & Service & \texttt{/apiVersion} & 0.45 & 23 & 5 & 0.001 & 0.007 & 0.42 & fragile \\
 secret-ref-wrong-name & Deployment & \texttt{/status/replicas} & 0.28 & 11 & 0 & 0.001 & 0.007 & 0.57 & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.33 & 14 & 1 & 0.001 & 0.007 & 0.57 & destab \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/name} & 0.42 & 22 & 5 & 0.002 & 0.011 & 0.42 & destab \\

@@ -32,6 +32,8 @@ type DeploymentParams struct {
 	MountName          string // optional: volumeMounts[].name ("" defaults to "data", the volumes[].name)
 	EnvKey             string // optional: env[].valueFrom.configMapKeyRef.key ("" omits the env block)
 	EnvName            string // optional: env[].name ("" defaults to EnvKey)
+	CPURequest         string // optional: resources.requests.cpu ("" keeps resources: {}); REQUIRED realism when an HPA cpu-Utilization target points here
+	MemoryRequest      string // optional: resources.requests.memory (only rendered with CPURequest)
 	EnvConfigMap       string // optional: env[].valueFrom.configMapKeyRef.name
 	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
 	Status             string // optional: StatusHealthy | StatusFailing ("" omits status)

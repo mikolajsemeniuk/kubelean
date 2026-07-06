@@ -60,7 +60,14 @@ spec:
           image: {{ .Image }}
           {{- if .Created }}
           imagePullPolicy: IfNotPresent
+          {{- if .CPURequest }}
+          resources:
+            requests:
+              cpu: {{ .CPURequest }}
+              memory: {{ .MemoryRequest }}
+          {{- else }}
           resources: {}
+          {{- end }}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           {{- end }}

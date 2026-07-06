@@ -6,8 +6,10 @@
 % model: qwen2.5:7b-instruct @ 845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e ; k=40 ; temp=0.70 ; num_ctx=8192
 % Table A — saliency with 95% CI (non-deciding fields). Verdict: signal =
 % BH q <= 0.05 AND saliency above the scenario's negative-control fragility
-% floor; destab = clears BH only; control = a-priori bookkeeping field
-% (ineligible as signal, defines the floor). Full evidence in fdr.gen.tex.
+% floor AND floor <= 0.30; fragile = the scenario's floor exceeds that bound
+% (destabilization-dominated); destab = clears BH only; control = a-priori
+% bookkeeping field (ineligible as signal, defines the floor). Full evidence
+% in fdr.gen.tex.
 \begin{tabular}{lllrcc}
 \toprule
 Scenario & Kind & Field & Saliency & 95\% CI & Verdict \\
@@ -198,7 +200,7 @@ pdb-selector-mismatch & Deployment & \texttt{/status/readyReplicas} & 0.03 & [-0
 pdb-selector-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.15, 0.15] & no \\
 pdb-selector-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.03 & [-0.13, 0.18] & no \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/apiVersion} & 0.12 & [-0.01, 0.27] & no \\
-rolebinding-role-wrong-name & RoleBinding & \textbf{\texttt{/kind}} & 0.95 & [0.80, 0.98] & signal \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/kind} & 0.95 & [0.80, 0.98] & fragile \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/creationTimestamp} & 0.90 & [0.74, 0.95] & control \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/name} & -0.03 & [-0.13, 0.07] & no \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/namespace} & -0.03 & [-0.13, 0.07] & no \\
@@ -258,7 +260,7 @@ secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/po
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.03 & [-0.12, 0.17] & no \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.30 & [0.11, 0.47] & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.08 & [-0.08, 0.23] & no \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/schedulerName}} & 0.60 & [0.40, 0.73] & signal \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.60 & [0.40, 0.73] & fragile \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.33 & [0.13, 0.49] & destab \\
 secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.57 & [0.37, 0.71] & control \\
 secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.18 & [0.00, 0.34] & control \\
@@ -453,7 +455,7 @@ statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/creationTimestam
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/generation} & 0.25 & [0.06, 0.42] & control \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/name} & 0.42 & [0.22, 0.58] & destab \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/namespace} & 0.30 & [0.10, 0.47] & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/metadata/labels}} & 0.88 & [0.71, 0.95] & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/labels} & 0.88 & [0.71, 0.95] & fragile \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/resourceVersion} & -0.03 & [-0.17, 0.12] & control \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/uid} & 0.03 & [-0.13, 0.18] & control \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/podManagementPolicy} & 0.03 & [-0.13, 0.18] & no \\
@@ -463,27 +465,27 @@ statefulset-selector-mismatch & StatefulSet & \texttt{/spec/revisionHistoryLimit
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/metadata/creationTimestamp} & 0.42 & [0.22, 0.58] & control \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/name} & 0.25 & [0.06, 0.42] & destab \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/image} & 0.20 & [0.02, 0.37] & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/containers/*/imagePullPolicy}} & 0.72 & [0.53, 0.83] & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.72 & [0.53, 0.83] & fragile \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.18 & [-0.01, 0.34] & no \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/containers/*/terminationMessagePolicy}} & 0.70 & [0.50, 0.81] & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.70 & [0.50, 0.81] & fragile \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & -0.03 & [-0.17, 0.12] & no \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.15 & [-0.03, 0.32] & no \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/dnsPolicy}} & 0.62 & [0.42, 0.75] & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/restartPolicy}} & 0.47 & [0.27, 0.63] & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/schedulerName}} & 0.72 & [0.53, 0.83] & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/terminationGracePeriodSeconds}} & 0.45 & [0.25, 0.61] & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/updateStrategy/rollingUpdate/partition}} & 0.45 & [0.25, 0.61] & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/dnsPolicy} & 0.62 & [0.42, 0.75] & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/restartPolicy} & 0.47 & [0.27, 0.63] & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/schedulerName} & 0.72 & [0.53, 0.83] & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.45 & [0.25, 0.61] & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/updateStrategy/rollingUpdate/partition} & 0.45 & [0.25, 0.61] & fragile \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/updateStrategy/type} & 0.28 & [0.08, 0.44] & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/availableReplicas}} & 0.53 & [0.32, 0.67] & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/collisionCount}} & 0.72 & [0.53, 0.83] & signal \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/currentReplicas}} & 0.75 & [0.56, 0.85] & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/availableReplicas} & 0.53 & [0.32, 0.67] & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/collisionCount} & 0.72 & [0.53, 0.83] & fragile \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/currentReplicas} & 0.75 & [0.56, 0.85] & fragile \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/status/currentRevision} & 0.20 & [0.02, 0.37] & no \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/status/observedGeneration} & 0.28 & [0.08, 0.44] & destab \\
-statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/readyReplicas}} & 0.47 & [0.27, 0.63] & signal \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/readyReplicas} & 0.47 & [0.27, 0.63] & fragile \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/status/replicas} & 0.22 & [0.04, 0.40] & no \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/status/updateRevision} & 0.22 & [0.04, 0.40] & no \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/status/updatedReplicas} & 0.28 & [0.08, 0.44] & destab \\
-statefulset-selector-mismatch & Service & \textbf{\texttt{/apiVersion}} & 0.45 & [0.25, 0.61] & signal \\
+statefulset-selector-mismatch & Service & \texttt{/apiVersion} & 0.45 & [0.25, 0.61] & fragile \\
 statefulset-selector-mismatch & Service & \texttt{/kind} & -0.03 & [-0.17, 0.12] & no \\
 statefulset-selector-mismatch & Service & \texttt{/metadata/creationTimestamp} & 0.03 & [-0.13, 0.18] & control \\
 statefulset-selector-mismatch & Service & \texttt{/metadata/name} & 0.40 & [0.20, 0.56] & destab \\
@@ -497,12 +499,12 @@ statefulset-selector-mismatch & Service & \texttt{/spec/internalTrafficPolicy} &
 statefulset-selector-mismatch & Service & \texttt{/spec/ipFamilies/*} & -0.07 & [-0.22, 0.06] & no \\
 statefulset-selector-mismatch & Service & \texttt{/spec/ipFamilyPolicy} & -0.07 & [-0.22, 0.06] & no \\
 statefulset-selector-mismatch & Service & \texttt{/spec/sessionAffinity} & -0.03 & [-0.17, 0.12] & no \\
-statefulset-selector-mismatch & Service & \textbf{\texttt{/spec/selector}} & 0.55 & [0.34, 0.69] & signal \\
+statefulset-selector-mismatch & Service & \texttt{/spec/selector} & 0.55 & [0.34, 0.69] & fragile \\
 statefulset-selector-mismatch & Service & \texttt{/spec/ports/*/port} & -0.10 & [-0.24, 0.03] & no \\
 statefulset-selector-mismatch & Service & \texttt{/spec/ports/*/targetPort} & -0.10 & [-0.24, 0.03] & no \\
 statefulset-selector-mismatch & Service & \texttt{/spec/ports/*/protocol} & 0.07 & [-0.09, 0.24] & no \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/apiVersion} & -0.10 & [-0.25, 0.05] & no \\
-storageclass-wrong-name & PersistentVolumeClaim & \textbf{\texttt{/kind}} & 0.72 & [0.53, 0.83] & signal \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/kind} & 0.72 & [0.53, 0.83] & fragile \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/creationTimestamp} & 0.25 & [0.05, 0.43] & control \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/name} & 0.12 & [-0.06, 0.30] & no \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/namespace} & -0.08 & [-0.23, 0.08] & no \\
@@ -512,7 +514,7 @@ storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/uid} & -0.08
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/accessModes/*} & -0.18 & [-0.32, -0.05] & no \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/resources/requests/storage} & -0.15 & [-0.30, -0.01] & no \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/volumeMode} & -0.10 & [-0.25, 0.05] & no \\
-storageclass-wrong-name & PersistentVolumeClaim & \textbf{\texttt{/status/phase}} & 0.82 & [0.66, 0.91] & signal \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/status/phase} & 0.82 & [0.66, 0.91] & fragile \\
 storageclass-wrong-name & StorageClass & \texttt{/apiVersion} & -0.10 & [-0.25, 0.05] & no \\
 storageclass-wrong-name & StorageClass & \texttt{/kind} & -0.15 & [-0.30, -0.01] & no \\
 storageclass-wrong-name & StorageClass & \texttt{/metadata/creationTimestamp} & 0.47 & [0.26, 0.63] & control \\

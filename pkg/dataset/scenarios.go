@@ -436,6 +436,7 @@ func imagePullSecretWrongName(twin bool) Scenario {
 	sec := NewSecret(SecretParams{
 		Name:       secretName,
 		Namespace:  "production",
+		Type:       "kubernetes.io/dockerconfigjson", // 2026-07-06: an Opaque pull secret is invalid (kubelet rejects it) — a strong model could legally flag the twin
 		StringData: map[string]string{".dockerconfigjson": "redacted-docker-config"},
 		ServerMeta: srv("dfd4b5d5-74fd-4d93-a55d-a947f62d9c70", "703368"),
 	})
@@ -806,6 +807,10 @@ func hpaTargetWrongName(twin bool) Scenario {
 		Name: "api-server", Namespace: "production", App: "api",
 		Replicas: 2, SelectorApp: "api", PodApp: "api",
 		ContainerName: "api", Image: "ghcr.io/acme/api:2.3.1", ContainerPort: 8080,
+		// An HPA with a cpu Utilization target needs resources.requests on the
+		// pods, or a real controller reports FailedGetResourceMetric — without
+		// them a strong model could legally flag the healthy twin (2026-07-06).
+		CPURequest: "250m", MemoryRequest: "256Mi",
 		ServerMeta: srv("7a1c1454-6c27-4260-ae76-457ee5549e01", "910222"),
 		Status:     StatusHealthy,
 	})
@@ -1535,6 +1540,7 @@ func servicePortCrowded(twin bool) Scenario {
 
 	pull := NewSecret(SecretParams{
 		Name: "registry-credentials", Namespace: "production",
+		Type:       "kubernetes.io/dockerconfigjson",
 		StringData: map[string]string{".dockerconfigjson": "redacted-docker-config"},
 		ServerMeta: srv("39d7f5a1-6e82-4c04-b1f6-a48c27e95d30", "764218"),
 	})
@@ -1734,6 +1740,8 @@ func healthyWebStack() Scenario {
 		Name: "shop", Namespace: "production", App: "shop",
 		Replicas: 3, SelectorApp: "shop", PodApp: "shop",
 		ContainerName: "shop", Image: "ghcr.io/acme/shop:5.2.0", ContainerPort: 8080,
+		// requests required for the bundle's HPA cpu target (see hpaTargetWrongName)
+		CPURequest: "250m", MemoryRequest: "256Mi",
 		ServerMeta: srv("745c73ac-78f1-490d-a1f0-bae2cd4aaf48", "153328"),
 		Status:     StatusHealthy,
 	})

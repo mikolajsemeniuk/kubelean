@@ -15,4 +15,4 @@ metadata:
   {{- end }}
 provisioner: {{ .Provisioner }}
 reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate

@@ -1137,7 +1137,10 @@ spec:
         - name: shop
           image: ghcr.io/acme/shop:5.2.0
           imagePullPolicy: IfNotPresent
-          resources: {}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           ports:
@@ -1299,7 +1302,10 @@ spec:
         - name: api
           image: ghcr.io/acme/api:2.3.1
           imagePullPolicy: IfNotPresent
-          resources: {}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           ports:
@@ -1397,7 +1403,10 @@ spec:
         - name: api
           image: ghcr.io/acme/api:2.3.1
           imagePullPolicy: IfNotPresent
-          resources: {}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           ports:
@@ -1494,7 +1503,7 @@ metadata:
   namespace: production
   resourceVersion: "703368"
   uid: dfd4b5d5-74fd-4d93-a55d-a947f62d9c70
-type: Opaque
+type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
 \end{verbatim}
@@ -1571,7 +1580,7 @@ metadata:
   namespace: production
   resourceVersion: "703368"
   uid: dfd4b5d5-74fd-4d93-a55d-a947f62d9c70
-type: Opaque
+type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
 \end{verbatim}
@@ -4426,7 +4435,7 @@ metadata:
   namespace: production
   resourceVersion: "764218"
   uid: 39d7f5a1-6e82-4c04-b1f6-a48c27e95d30
-type: Opaque
+type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
 \end{verbatim}
@@ -4545,7 +4554,7 @@ metadata:
   namespace: production
   resourceVersion: "764218"
   uid: 39d7f5a1-6e82-4c04-b1f6-a48c27e95d30
-type: Opaque
+type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
 \end{verbatim}
@@ -5447,7 +5456,7 @@ metadata:
   uid: fd64cf11-c8ac-4a73-ae4f-b3a8d86e1caa
 provisioner: ebs.csi.aws.com
 reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
 \end{verbatim}
 
 % scenario: storageclass-wrong-name-twin — fault: NoFaultFound
@@ -5488,7 +5497,7 @@ metadata:
   uid: fd64cf11-c8ac-4a73-ae4f-b3a8d86e1caa
 provisioner: ebs.csi.aws.com
 reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
 \end{verbatim}
 
 % scenario: volumemount-wrong-name — fault: Ref_NotFound
