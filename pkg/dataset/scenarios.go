@@ -90,6 +90,10 @@ func All() []Scenario {
 		serviceStatefulSetPortMismatch,
 		pdbSelectorMismatch,
 		networkPolicySelectorMismatch,
+		secretRefCrowded,
+		secretVolumeCrowded,
+		servicePortCrowded,
+		configMapRefCrowded,
 	}
 
 	var out []Scenario
@@ -177,14 +181,21 @@ func selectorLabelMismatch(twin bool) Scenario {
 	return maybeTwin(twin, out)
 }
 
-// statefulSetSelectorMismatch is a single StatefulSet whose pod template labels
-// (app=database) do not match its own selector (app=db) — the same SelectorMismatch
+// statefulSetSelectorMismatch is a StatefulSet whose selector (app=database)
+// does not match its own pod template labels (app=db) — the same SelectorMismatch
 // root cause as the Deployment case, on a second workload Kind, within one
 // document (so the 7B handles it, unlike the cross-document Service case).
+//
+// The bundle carries the headless governing Service the template's required
+// spec.serviceName points at (2026-07-04: previously absent, so serviceName
+// dangled — a second anomaly violating the one-anomaly rule, in the twin too).
+// The anomaly lives in the SELECTOR, not the pod labels, so that Service stays
+// fully healthy in both variants: its selector app=db matches the pods, whose
+// labels are constant db.
 func statefulSetSelectorMismatch(twin bool) Scenario {
-	podApp, status := "database", StatusFailing
+	selectorApp, status := "database", StatusFailing
 	if twin {
-		podApp, status = "db", StatusHealthy
+		selectorApp, status = "db", StatusHealthy
 	}
 
 	sts := NewStatefulSet(StatefulSetParams{
@@ -192,13 +203,20 @@ func statefulSetSelectorMismatch(twin bool) Scenario {
 		Namespace:     "production",
 		App:           "db",
 		Replicas:      3,
-		SelectorApp:   "db",
-		PodApp:        podApp,
+		SelectorApp:   selectorApp,
+		PodApp:        "db",
 		ContainerName: "db",
 		Image:         "postgres:16.2",
 		ContainerPort: 5432,
 		ServerMeta:    srv("2fa8047b-869d-4724-a70d-71337826cfd5", "531795"),
 		Status:        status,
+	})
+
+	svc := NewService(ServiceParams{
+		Name: "db", Namespace: "production", App: "db",
+		Headless: true, SelectorApp: "db", Port: 5432, TargetPort: 5432,
+		ServerMeta: srv("83b7c9d1-52e6-4f0a-b1a4-9c27d3e8f615", "418362"),
+		Status:     StatusHealthy,
 	})
 
 	return maybeTwin(twin, Scenario{
@@ -207,9 +225,13 @@ func statefulSetSelectorMismatch(twin bool) Scenario {
 		FaultClass: FaultSelectorMismatch,
 		DecidingFields: []DecidingField{
 			{Kind: "StatefulSet", Path: "spec.selector.matchLabels.app"},
-			{Kind: "StatefulSet", Path: "spec.template.metadata.labels.app"},
+			// Unlike the Service-less single-doc siblings this side is
+			// evidence-hiding: removing the pod labels leaves the anomalous
+			// selector dangling AND breaks the healthy Service→pods match, so
+			// NoFaultFound holds only under the charitable absent-field reading.
+			{Kind: "StatefulSet", Path: "spec.template.metadata.labels.app", Hides: true},
 		},
-		YAML: joinDocs(sts),
+		YAML: joinDocs(sts, svc),
 	})
 }
 
@@ -998,7 +1020,11 @@ func healthyBundle() Scenario {
 // envKeyWrongName is a Deployment whose env valueFrom configMapKeyRef points at
 // key "LOG_FORMAT", but the ConfigMap only has LOG_LEVEL and REGION — the key in
 // valueFrom the Ref_NotFound class description promises is now actually tested.
-// The ConfigMap name itself resolves; the key is the only anomaly.
+// The ConfigMap name itself resolves; the key is the only anomaly. The env var
+// NAME is a fixed distinct string (APP_LOGGING): with name == key (the old
+// shape), removing the deciding key left the var name still echoing the missing
+// key, so Table 2a's expected NoFaultFound was never honestly obtainable and
+// the env[].name cell was a ground-truth echo, not an independent field.
 func envKeyWrongName(twin bool) Scenario {
 	envKey, status := "LOG_FORMAT", StatusFailing
 	if twin {
@@ -1016,6 +1042,7 @@ func envKeyWrongName(twin bool) Scenario {
 		Image:         "ghcr.io/acme/api:2.3.1",
 		ContainerPort: 8080,
 		EnvKey:        envKey,
+		EnvName:       "APP_LOGGING",
 		EnvConfigMap:  "api-config",
 		ServerMeta:    srv("2d92b89e-beb7-4aaa-a0cb-c880c09705e8", "273161"),
 		Status:        status,
@@ -1301,6 +1328,291 @@ func serviceStatefulSetPortMismatch(twin bool) Scenario {
 			{Kind: "StatefulSet", Path: "spec.template.spec.containers[].ports[].containerPort", Hides: true},
 		},
 		YAML: joinDocs(svc, sts),
+	})
+}
+
+// The three *-crowded scenarios are profile densifiers (2026-07-04). The
+// cross-scenario field profile (fieldprofile.gen.tex, the anti-circularity
+// defense) needs every claimed field-key to appear as a NON-deciding healthy
+// bystander in ≥2 scored scenarios — but most reference keys had 0–1 such
+// appearances, all concentrated in scenarios the 7B cannot score. So each
+// crowded scenario injects a fault from a pattern the 7B reliably diagnoses
+// (envFrom ref, secret volume, targetPort — the gate-surviving patterns) and
+// packs the bundle with fully-healthy witnesses of the under-profiled keys
+// (serviceAccountName, claimName, priorityClassName, imagePullSecrets,
+// roleRef/subjects, …). A witness needs no model competence to yield data:
+// it only has to sit, resolving and healthy, in a scenario that passes the
+// gate. Witnesses are distributed so none shares a Kind with the scenario's
+// Hides locus (e.g. no second Secret where Secret metadata.name is deciding —
+// ResolveLeaves resolves per Kind, so a second doc would become a bogus locus).
+
+// secretRefCrowded injects the secret-ref-wrong-name fault (envFrom secretRef
+// dangles) into a bundle crowded with healthy witnesses: configMapRef → CM,
+// serviceAccountName → SA, and a PVC-backed volume. Gives configMapRef.name,
+// serviceAccountName and claimName non-deciding appearances in a scenario the
+// 7B scores ~0.9 on.
+func secretRefCrowded(twin bool) Scenario {
+	// Divergence type: swapped word order — the Secret exists as "api-cache",
+	// the reference asks for "cache-api".
+	secretName, status := "api-cache", StatusFailing
+	if twin {
+		secretName, status = "cache-api", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name:               "api",
+		Namespace:          "production",
+		App:                "api",
+		Replicas:           2,
+		SelectorApp:        "api",
+		PodApp:             "api",
+		ContainerName:      "api",
+		Image:              "ghcr.io/acme/api:2.3.1",
+		ContainerPort:      8080,
+		ConfigMapRef:       "api-config",
+		SecretRef:          "cache-api",
+		ServiceAccountName: "api-runner",
+		VolumeKind:         "pvc",
+		VolumeRef:          "api-data",
+		ServerMeta:         srv("7c3f2e81-9a45-4d1b-8e67-2b9c4f0a5d13", "618442"),
+		Status:             status,
+	})
+
+	sec := NewSecret(SecretParams{
+		Name: secretName, Namespace: "production",
+		StringData: map[string]string{"CACHE_URL": "redacted-cache-url"},
+		ServerMeta: srv("f24a8c96-3e57-4b02-9d18-c67a1e84b5f0", "224917"),
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: "api-config", Namespace: "production",
+		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		ServerMeta: srv("9b615f38-d2c4-47a9-b3e5-081f7d62c9a4", "837156"),
+	})
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "api-runner", Namespace: "production", App: "api",
+		ServerMeta: srv("4e8a17d5-6f92-4c38-a1b0-d95c3e2f8746", "149528"),
+	})
+
+	pvc := NewPVC(PVCParams{
+		Name: "api-data", Namespace: "production", App: "api", Storage: "5Gi",
+		ServerMeta: srv("a17e94c2-58b3-4f6d-92c8-3d40e6b1f759", "962371"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "secret-ref-crowded",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].secretRef.name"},
+			{Kind: "Secret", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(dep, sec, cm, sa, pvc),
+	})
+}
+
+// secretVolumeCrowded injects the secret-volume-wrong-name fault (secret volume
+// source dangles) into a bundle with healthy witnesses: priorityClassName → PC,
+// envFrom configMapRef → CM, serviceAccountName → SA (its second witness
+// appearance — the ≥2 rule). No second Secret: metadata.name of Kind Secret is
+// this scenario's Hides locus.
+func secretVolumeCrowded(twin bool) Scenario {
+	// Divergence type: environment prefix — the Secret exists as "api-tls",
+	// the volume asks for "prod-api-tls" (the suffix variant lives in
+	// serviceaccount-wrong-name).
+	secretName, status := "api-tls", StatusFailing
+	if twin {
+		secretName, status = "prod-api-tls", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name:               "api",
+		Namespace:          "production",
+		App:                "api",
+		Replicas:           2,
+		SelectorApp:        "api",
+		PodApp:             "api",
+		ContainerName:      "api",
+		Image:              "ghcr.io/acme/api:2.3.1",
+		ContainerPort:      8080,
+		ConfigMapRef:       "api-config",
+		ServiceAccountName: "api-runner",
+		PriorityClassName:  "api-critical",
+		VolumeKind:         "secret",
+		VolumeRef:          "prod-api-tls",
+		ServerMeta:         srv("5d29b7f4-1c86-4e53-b9a2-7f01d8c64e35", "528709"),
+		Status:             status,
+	})
+
+	sec := NewSecret(SecretParams{
+		Name: secretName, Namespace: "production",
+		StringData: map[string]string{"tls.crt": "redacted-cert", "tls.key": "redacted-key"},
+		ServerMeta: srv("e83c51a9-47d0-4b16-8f2e-95a6b3d7c012", "316584"),
+	})
+
+	pc := NewPriorityClass(PriorityClassParams{
+		Name: "api-critical", App: "api", Value: 1000000, Description: "critical API pods",
+		ServerMeta: srv("2f74d8b1-9e35-4a60-8c17-b5e29a4f6d83", "741296"),
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: "api-config", Namespace: "production",
+		Data:       map[string]string{"LOG_LEVEL": "info", "REGION": "eu-west-1"},
+		ServerMeta: srv("b98f26e4-53a1-4d7c-9e08-6a2c5f81d4b7", "405163"),
+	})
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "api-runner", Namespace: "production", App: "api",
+		ServerMeta: srv("638d1a75-e4b9-4f28-a56c-90d7e3b8f142", "872645"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "secret-volume-crowded",
+		Group:      GroupVolumes,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.volumes[].secret.secretName"},
+			{Kind: "Secret", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(dep, sec, pc, cm, sa),
+	})
+}
+
+// servicePortCrowded injects the service-port-mismatch fault (targetPort vs
+// containerPort) into a bundle with serviceAccountName → SA and
+// imagePullSecrets → pull Secret witnesses. Deliberately SLIM (4 docs): the
+// port comparison drowns in a bigger crowd — with the full RBAC chain aboard
+// the 7B scored 0/2 (port 8000) and 1/4 (port 3000), so the RBAC witnesses
+// moved to configmap-ref-crowded, whose ref pattern tolerates crowding. The
+// Secret witness is safe here: the Hides locus lives in the Deployment
+// (containerPort), not in Kind Secret.
+func servicePortCrowded(twin bool) Scenario {
+	// Divergence type: a different well-known port — the Service targets 3000
+	// while the pods listen on 8080 (9090 and the digit transposition live in
+	// the other two port scenarios). First tried 8000: at k=2 the 7B scored
+	// 0/2 — visually near-identical to 8080, the comparison drowned in the
+	// crowded bundle. 3000 restores the contrast without touching the prompt.
+	targetPort := 3000
+	if twin {
+		targetPort = 8080
+	}
+
+	// All statuses healthy even in the faulty case: pods run, the Service
+	// exists; refused connections only show at traffic time (mirrors
+	// service-port-mismatch).
+	svc := NewService(ServiceParams{
+		Name: "payments", Namespace: "production", App: "payments",
+		SelectorApp: "payments",
+		// port == containerPort (8080): targetPort is the only anomalous value.
+		Port: 8080, TargetPort: targetPort,
+		ClusterIP:  "10.96.101.57",
+		ServerMeta: srv("c45b92e7-8d13-4a6f-b704-1e58c9a2d6f3", "293840"),
+		Status:     StatusHealthy,
+	})
+
+	dep := NewDeployment(DeploymentParams{
+		Name:               "payments",
+		Namespace:          "production",
+		App:                "payments",
+		Replicas:           2,
+		SelectorApp:        "payments",
+		PodApp:             "payments",
+		ContainerName:      "payments",
+		Image:              "ghcr.io/acme/payments:3.1.2",
+		ContainerPort:      8080,
+		ServiceAccountName: "payments-sa",
+		ImagePullSecret:    "registry-credentials",
+		ServerMeta:         srv("8a06e3d9-2b74-4c15-9f8e-d61a05b7c428", "657092"),
+		Status:             StatusHealthy,
+	})
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "payments-sa", Namespace: "production", App: "payments",
+		ServerMeta: srv("d5f183c6-a927-4e40-8b35-2c9e6f04a1d8", "384521"),
+	})
+
+	pull := NewSecret(SecretParams{
+		Name: "registry-credentials", Namespace: "production",
+		StringData: map[string]string{".dockerconfigjson": "redacted-docker-config"},
+		ServerMeta: srv("39d7f5a1-6e82-4c04-b1f6-a48c27e95d30", "764218"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "service-port-crowded",
+		Group:      GroupNetworking,
+		FaultClass: FaultPortMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "Service", Path: "spec.ports[].targetPort"},
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort", Hides: true},
+		},
+		YAML: joinDocs(svc, dep, sa, pull),
+	})
+}
+
+// configMapRefCrowded injects the configmap-ref-wrong-name fault (envFrom
+// configMapRef dangles) into a bundle carrying the healthy RBAC chain — SA,
+// Role, RoleBinding with both roleRef AND subjects resolving. The RBAC
+// witnesses live HERE and not in service-port-crowded because the envFrom-ref
+// pattern tolerates crowding (secret-ref-crowded smoked 2/2) while the port
+// comparison drowned in it. Deciding Kinds are Deployment and ConfigMap, so
+// SA/Role/RoleBinding are safe witness Kinds.
+func configMapRefCrowded(twin bool) Scenario {
+	// Divergence type: stale unversioned reference — the ConfigMap exists as
+	// "team-config-v2", the reference still asks for "team-config".
+	cmName, status := "team-config-v2", StatusFailing
+	if twin {
+		cmName, status = "team-config", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name:               "worker",
+		Namespace:          "production",
+		App:                "worker",
+		Replicas:           2,
+		SelectorApp:        "worker",
+		PodApp:             "worker",
+		ContainerName:      "worker",
+		Image:              "ghcr.io/acme/worker:1.9.4",
+		ContainerPort:      8080,
+		ConfigMapRef:       "team-config",
+		ServiceAccountName: "worker-sa",
+		ServerMeta:         srv("e6a94d27-503b-4f18-9c6d-84b1f2e07a53", "836150"),
+		Status:             status,
+	})
+
+	cm := NewConfigmap(ConfigmapParams{
+		Name: cmName, Namespace: "production",
+		Data:       map[string]string{"QUEUE": "jobs", "WORKERS": "4"},
+		ServerMeta: srv("0d52c8f1-7e94-4b36-a2d8-5f60b3a19e47", "294781"),
+	})
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "worker-sa", Namespace: "production", App: "worker",
+		ServerMeta: srv("b2e07c54-186f-4da3-9e51-c7a4d8f36b90", "573629"),
+	})
+
+	role := NewRole(RoleParams{
+		Name: "queue-reader", Namespace: "production", App: "worker",
+		ServerMeta: srv("1b8e64f2-c059-4d83-a7e1-96b3d24c5f70", "508936"),
+	})
+
+	rb := NewRoleBinding(RoleBindingParams{
+		Name: "queue-reader-binding", Namespace: "production", App: "worker",
+		ServiceAccountName: "worker-sa", RoleName: "queue-reader",
+		ServerMeta: srv("76c2a9e8-4f31-4b57-8d09-e3a51c68b294", "120473"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "configmap-ref-crowded",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].envFrom[].configMapRef.name"},
+			{Kind: "ConfigMap", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(dep, cm, sa, role, rb),
 	})
 }
 

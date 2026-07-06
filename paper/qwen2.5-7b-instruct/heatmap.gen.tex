@@ -3,70 +3,71 @@
 % model: qwen2.5:7b-instruct @ 845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e ; k=40 ; temp=0.70 ; num_ctx=8192
 % Table 1 — saliency map (non-deciding fields). Saliency = baseline accuracy
 % − reduced accuracy, each a fraction over the cell's trials. Bold = signal:
-% seed-paired exact McNemar, Benjamini–Hochberg q <= 0.05 across the 435
-% cells of the map; see confidence.gen.tex for CIs, p and q. Valid is a
-% covariate, not a gate.
+% seed-paired exact McNemar, Benjamini–Hochberg q <= 0.05 across the 510
+% cells of the map, AND saliency above the scenario's negative-control
+% fragility floor (see fdr.gen.tex); see confidence.gen.tex for CIs, p, q
+% and per-cell verdicts. Valid is a covariate, not a gate.
 \begin{tabular}{lllcr}
 \toprule
 Scenario & Kind & Field & Valid & Saliency \\
 \midrule
-configmap-ref-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.12 \\
-configmap-ref-wrong-name & Deployment & \texttt{/kind} & yes & 0.03 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/metadata/annotations}} & yes & 0.50 \\
+configmap-ref-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.10 \\
+configmap-ref-wrong-name & Deployment & \texttt{/kind} & yes & -0.05 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/annotations} & yes & 0.53 \\
 configmap-ref-wrong-name & Deployment & \texttt{/metadata/creationTimestamp} & yes & 0.03 \\
-configmap-ref-wrong-name & Deployment & \texttt{/metadata/generation} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/generation} & yes & 0.03 \\
 configmap-ref-wrong-name & Deployment & \texttt{/metadata/name} & no & 0.00 \\
-configmap-ref-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & -0.05 \\
-configmap-ref-wrong-name & Deployment & \texttt{/metadata/labels} & yes & 0.23 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/metadata/resourceVersion}} & yes & 0.25 \\
-configmap-ref-wrong-name & Deployment & \texttt{/metadata/uid} & yes & 0.00 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & 0.15 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/replicas} & yes & 0.00 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & 0.23 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.23 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & 0.23 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & 0.20 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/strategy/type} & yes & 0.00 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & 0.08 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.23 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & -0.10 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/labels} & yes & 0.10 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/resourceVersion} & yes & 0.10 \\
+configmap-ref-wrong-name & Deployment & \texttt{/metadata/uid} & yes & -0.05 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & 0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/replicas} & yes & 0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & 0.15 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & 0.20 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & 0.22 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/strategy/type} & yes & 0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & -0.10 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.22 \\
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.00 \\
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & 0.18 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/imagePullPolicy}} & yes & 0.30 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/terminationMessagePath}} & yes & 0.33 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.08 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/ports/*/containerPort}} & yes & 0.58 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & 0.03 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name}} & yes & 0.85 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & 0.00 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & 0.12 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.15 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.12 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.15 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & -0.10 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.20 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & 0.10 \\
 configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & 0.00 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & 0.15 \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & 0.15 \\
-configmap-ref-wrong-name & Deployment & \textbf{\texttt{/status/conditions/*/lastTransitionTime}} & yes & 0.53 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.25 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/message} & yes & 0.25 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.23 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/status} & yes & 0.03 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/type} & yes & 0.18 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/observedGeneration} & yes & 0.12 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & 0.20 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & 0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & 0.57 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.20 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/message} & yes & -0.07 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/reason} & yes & -0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/status} & yes & 0.15 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/conditions/*/type} & yes & 0.20 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/observedGeneration} & yes & 0.03 \\
 configmap-ref-wrong-name & Deployment & \texttt{/status/replicas} & yes & 0.20 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & yes & 0.20 \\
-configmap-ref-wrong-name & Deployment & \texttt{/status/updatedReplicas} & yes & 0.18 \\
-configmap-ref-wrong-name & ConfigMap & \textbf{\texttt{/apiVersion}} & yes & 0.50 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & yes & -0.03 \\
+configmap-ref-wrong-name & Deployment & \texttt{/status/updatedReplicas} & yes & -0.07 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & yes & 0.38 \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/kind} & yes & -0.07 \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/creationTimestamp} & yes & -0.07 \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & yes & -0.05 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/creationTimestamp} & yes & -0.10 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & yes & -0.10 \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/uid} & yes & 0.03 \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/data} & yes & -0.07 \\
-configmap-ref-wrong-name & Secret & \texttt{/apiVersion} & yes & -0.07 \\
-configmap-ref-wrong-name & Secret & \texttt{/kind} & yes & -0.07 \\
-configmap-ref-wrong-name & Secret & \texttt{/metadata/creationTimestamp} & yes & -0.07 \\
-configmap-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 \\
-configmap-ref-wrong-name & Secret & \texttt{/metadata/namespace} & yes & 0.00 \\
-configmap-ref-wrong-name & Secret & \texttt{/metadata/resourceVersion} & yes & 0.08 \\
-configmap-ref-wrong-name & Secret & \texttt{/metadata/uid} & yes & 0.00 \\
-configmap-ref-wrong-name & Secret & \texttt{/type} & yes & 0.03 \\
-configmap-ref-wrong-name & Secret & \texttt{/data} & yes & 0.00 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/uid} & yes & 0.10 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/data} & yes & -0.10 \\
+configmap-ref-wrong-name & Secret & \texttt{/apiVersion} & yes & -0.05 \\
+configmap-ref-wrong-name & Secret & \texttt{/kind} & yes & 0.05 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/name} & no & -0.05 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/namespace} & yes & -0.05 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
+configmap-ref-wrong-name & Secret & \texttt{/metadata/uid} & yes & -0.10 \\
+configmap-ref-wrong-name & Secret & \texttt{/type} & yes & -0.05 \\
+configmap-ref-wrong-name & Secret & \texttt{/data} & yes & -0.05 \\
 ingress-backend-wrong-port & Ingress & \texttt{/apiVersion} & yes & 0.00 \\
 ingress-backend-wrong-port & Ingress & \texttt{/kind} & yes & 0.00 \\
 ingress-backend-wrong-port & Ingress & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
@@ -140,198 +141,150 @@ ingress-backend-wrong-port & Deployment & \texttt{/status/observedGeneration} & 
 ingress-backend-wrong-port & Deployment & \texttt{/status/readyReplicas} & yes & 0.00 \\
 ingress-backend-wrong-port & Deployment & \texttt{/status/replicas} & yes & 0.00 \\
 ingress-backend-wrong-port & Deployment & \texttt{/status/updatedReplicas} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/apiVersion} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/kind} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/generation} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/name} & no & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/namespace} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/labels} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/metadata/uid} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/backoffLimit} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/completionMode} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/completions} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/parallelism} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/suspend} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/metadata/creationTimestamp} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/metadata/labels} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/restartPolicy} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/name} & no & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/image} & no & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/dnsPolicy} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/schedulerName} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/status/active} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/status/ready} & yes & 0.00 \\
-job-secret-wrong-name & Job & \texttt{/status/startTime} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/apiVersion} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/kind} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/metadata/namespace} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/metadata/uid} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/type} & yes & 0.00 \\
-job-secret-wrong-name & Secret & \texttt{/data} & yes & 0.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.08 \\
-secret-ref-wrong-name & Deployment & \texttt{/kind} & yes & -0.07 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/metadata/annotations}} & yes & 0.55 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/creationTimestamp} & yes & 0.15 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/generation} & yes & -0.10 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/name} & no & -0.07 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & -0.07 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/labels} & yes & 0.12 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/resourceVersion} & yes & 0.12 \\
-secret-ref-wrong-name & Deployment & \texttt{/metadata/uid} & yes & -0.07 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & 0.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/replicas} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & 0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \textbf{\texttt{/apiVersion}} & yes & 0.30 \\
+pdb-selector-mismatch & PodDisruptionBudget & \textbf{\texttt{/kind}} & yes & 0.60 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/creationTimestamp} & yes & -0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/generation} & yes & -0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/name} & no & -0.03 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/namespace} & yes & -0.03 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/labels} & yes & 0.03 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/resourceVersion} & yes & -0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/uid} & yes & 0.03 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/spec/minAvailable} & yes & -0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/currentHealthy} & yes & -0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/desiredHealthy} & yes & -0.12 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/disruptionsAllowed} & yes & 0.00 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/expectedPods} & yes & -0.03 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/observedGeneration} & yes & -0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
+pdb-selector-mismatch & Deployment & \texttt{/kind} & yes & -0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/annotations} & yes & 0.18 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/creationTimestamp} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/generation} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/name} & no & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/namespace} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/labels} & yes & -0.10 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/resourceVersion} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/uid} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & -0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/replicas} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & -0.10 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & no & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & -0.10 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/strategy/type} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & -0.05 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & -0.05 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & -0.10 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & -0.07 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & -0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & -0.05 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & -0.05 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/availableReplicas} & yes & -0.12 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & -0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & -0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/message} & yes & 0.07 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/status} & yes & 0.00 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/type} & yes & 0.05 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/observedGeneration} & yes & 0.05 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/readyReplicas} & yes & 0.03 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/replicas} & yes & 0.00 \\
+pdb-selector-mismatch & Deployment & \texttt{/status/updatedReplicas} & yes & 0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/apiVersion} & yes & 0.12 \\
+rolebinding-role-wrong-name & RoleBinding & \textbf{\texttt{/kind}} & yes & 0.95 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/creationTimestamp} & yes & 0.90 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/name} & no & -0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/namespace} & yes & -0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/labels} & yes & 0.07 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/resourceVersion} & yes & -0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/metadata/uid} & yes & -0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/subjects/*/kind} & yes & -0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/subjects/*/name} & yes & 0.15 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/subjects/*/namespace} & yes & 0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/roleRef/kind} & no & -0.03 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/roleRef/apiGroup} & no & 0.28 \\
+rolebinding-role-wrong-name & Role & \texttt{/apiVersion} & yes & -0.03 \\
+rolebinding-role-wrong-name & Role & \texttt{/kind} & yes & -0.03 \\
+rolebinding-role-wrong-name & Role & \texttt{/metadata/creationTimestamp} & yes & -0.03 \\
+rolebinding-role-wrong-name & Role & \texttt{/metadata/namespace} & yes & 0.03 \\
+rolebinding-role-wrong-name & Role & \texttt{/metadata/labels} & yes & 0.15 \\
+rolebinding-role-wrong-name & Role & \texttt{/metadata/resourceVersion} & yes & 0.28 \\
+rolebinding-role-wrong-name & Role & \texttt{/metadata/uid} & yes & 0.57 \\
+rolebinding-role-wrong-name & Role & \texttt{/rules/*/apiGroups/*} & yes & 0.00 \\
+rolebinding-role-wrong-name & Role & \texttt{/rules/*/resources/*} & yes & 0.17 \\
+rolebinding-role-wrong-name & Role & \texttt{/rules/*/verbs/*} & yes & 0.28 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/apiVersion} & yes & 0.03 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/kind} & yes & -0.03 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/creationTimestamp} & yes & 0.72 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/name} & no & 0.20 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/namespace} & yes & 0.03 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/labels} & yes & 0.12 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/resourceVersion} & yes & 0.12 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/metadata/uid} & yes & 0.05 \\
+rolebinding-role-wrong-name & ServiceAccount & \texttt{/automountServiceAccountToken} & yes & 0.12 \\
+secret-ref-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.22 \\
+secret-ref-wrong-name & Deployment & \texttt{/kind} & yes & 0.10 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/annotations} & yes & 0.57 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/creationTimestamp} & yes & 0.05 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/generation} & yes & 0.03 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/name} & no & 0.10 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & 0.03 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/labels} & yes & 0.50 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/resourceVersion} & yes & 0.22 \\
+secret-ref-wrong-name & Deployment & \texttt{/metadata/uid} & yes & 0.00 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & 0.20 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/replicas} & yes & 0.03 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & 0.45 \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.15 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & 0.10 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & 0.12 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/type} & yes & -0.07 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.18 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & -0.03 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/image}} & no & 0.33 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & 0.15 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.18 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.05 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/ports/*/containerPort}} & yes & 0.25 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name}} & yes & 0.70 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & -0.07 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & -0.07 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & 0.00 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \textbf{\texttt{/status/conditions/*/lastTransitionTime}} & yes & 0.33 \\
-secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.22 \\
-secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/message} & yes & -0.10 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & 0.50 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & 0.57 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/strategy/type} & yes & 0.03 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & -0.10 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.50 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.12 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & 0.30 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & 0.43 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.25 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.33 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.35 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & 0.00 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & yes & 0.03 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & 0.30 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & 0.08 \\
+secret-ref-wrong-name & Deployment & \textbf{\texttt{/spec/template/spec/schedulerName}} & yes & 0.60 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & 0.33 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & 0.57 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.18 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/message} & yes & -0.03 \\
 secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.08 \\
-secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/status} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/type} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \texttt{/status/observedGeneration} & yes & -0.03 \\
-secret-ref-wrong-name & Deployment & \texttt{/status/replicas} & yes & 0.05 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/status} & yes & 0.25 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/conditions/*/type} & yes & 0.20 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/observedGeneration} & yes & 0.05 \\
+secret-ref-wrong-name & Deployment & \texttt{/status/replicas} & yes & 0.28 \\
 secret-ref-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & yes & 0.00 \\
 secret-ref-wrong-name & Deployment & \texttt{/status/updatedReplicas} & yes & -0.03 \\
-secret-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & yes & 0.12 \\
-secret-ref-wrong-name & ConfigMap & \texttt{/kind} & yes & -0.03 \\
-secret-ref-wrong-name & ConfigMap & \texttt{/metadata/creationTimestamp} & yes & 0.08 \\
-secret-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & -0.10 \\
-secret-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & yes & -0.10 \\
+secret-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & yes & 0.48 \\
+secret-ref-wrong-name & ConfigMap & \texttt{/kind} & yes & 0.15 \\
+secret-ref-wrong-name & ConfigMap & \texttt{/metadata/creationTimestamp} & yes & -0.07 \\
+secret-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.00 \\
+secret-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & yes & 0.00 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/metadata/resourceVersion} & yes & -0.10 \\
-secret-ref-wrong-name & ConfigMap & \texttt{/metadata/uid} & yes & -0.03 \\
+secret-ref-wrong-name & ConfigMap & \texttt{/metadata/uid} & yes & 0.10 \\
 secret-ref-wrong-name & ConfigMap & \texttt{/data} & yes & -0.10 \\
-secret-ref-wrong-name & Secret & \texttt{/apiVersion} & yes & -0.10 \\
-secret-ref-wrong-name & Secret & \texttt{/kind} & yes & 0.00 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/creationTimestamp} & yes & -0.10 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/namespace} & yes & -0.03 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/uid} & yes & -0.03 \\
-secret-ref-wrong-name & Secret & \texttt{/type} & yes & -0.03 \\
-secret-ref-wrong-name & Secret & \texttt{/data} & yes & -0.03 \\
-secret-volume-wrong-name & Deployment & \texttt{/apiVersion} & yes & -0.03 \\
-secret-volume-wrong-name & Deployment & \texttt{/kind} & yes & -0.05 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/annotations} & yes & 0.03 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/creationTimestamp} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/generation} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/name} & no & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/labels} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/metadata/resourceVersion} & yes & -0.05 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/metadata/uid}} & yes & 0.45 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/replicas} & yes & -0.05 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & no & -0.05 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/strategy/type} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & -0.05 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & -0.05 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & -0.05 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/name} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/mountPath} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & -0.03 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/name} & yes & 0.20 \\
-secret-volume-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & 0.12 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/status/conditions/*/lastUpdateTime}} & yes & 0.25 \\
-secret-volume-wrong-name & Deployment & \texttt{/status/conditions/*/message} & yes & -0.10 \\
-secret-volume-wrong-name & Deployment & \texttt{/status/conditions/*/reason} & yes & -0.12 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/status/conditions/*/status}} & yes & 0.30 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/status/conditions/*/type}} & yes & 0.30 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/status/observedGeneration}} & yes & 0.47 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/status/replicas}} & yes & 0.47 \\
-secret-volume-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & yes & 0.05 \\
-secret-volume-wrong-name & Deployment & \textbf{\texttt{/status/updatedReplicas}} & yes & 0.55 \\
-secret-volume-wrong-name & Secret & \textbf{\texttt{/apiVersion}} & yes & 0.65 \\
-secret-volume-wrong-name & Secret & \textbf{\texttt{/kind}} & yes & 0.25 \\
-secret-volume-wrong-name & Secret & \textbf{\texttt{/metadata/creationTimestamp}} & yes & 0.62 \\
-secret-volume-wrong-name & Secret & \texttt{/metadata/namespace} & yes & -0.03 \\
-secret-volume-wrong-name & Secret & \texttt{/metadata/resourceVersion} & yes & -0.03 \\
-secret-volume-wrong-name & Secret & \texttt{/metadata/uid} & yes & 0.05 \\
-secret-volume-wrong-name & Secret & \texttt{/type} & yes & -0.03 \\
-secret-volume-wrong-name & Secret & \textbf{\texttt{/data}} & yes & 0.47 \\
-secret-wrong-namespace & Deployment & \texttt{/apiVersion} & yes & 0.03 \\
-secret-wrong-namespace & Deployment & \texttt{/kind} & yes & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/annotations} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/creationTimestamp} & yes & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/generation} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/name} & no & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/labels} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/resourceVersion} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/metadata/uid} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/replicas} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/selector/matchLabels} & no & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/strategy/type} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/metadata/labels} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & -0.07 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/status/conditions/*/message} & yes & -0.05 \\
-secret-wrong-namespace & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.08 \\
-secret-wrong-namespace & Deployment & \texttt{/status/conditions/*/status} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/status/conditions/*/type} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/status/observedGeneration} & yes & 0.03 \\
-secret-wrong-namespace & Deployment & \texttt{/status/replicas} & yes & 0.00 \\
-secret-wrong-namespace & Deployment & \texttt{/status/unavailableReplicas} & yes & 0.23 \\
-secret-wrong-namespace & Deployment & \texttt{/status/updatedReplicas} & yes & 0.03 \\
-secret-wrong-namespace & Secret & \texttt{/apiVersion} & yes & 0.00 \\
-secret-wrong-namespace & Secret & \texttt{/kind} & yes & -0.07 \\
-secret-wrong-namespace & Secret & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-secret-wrong-namespace & Secret & \texttt{/metadata/name} & no & -0.07 \\
-secret-wrong-namespace & Secret & \texttt{/metadata/resourceVersion} & yes & -0.05 \\
-secret-wrong-namespace & Secret & \texttt{/metadata/uid} & yes & -0.05 \\
-secret-wrong-namespace & Secret & \texttt{/type} & yes & 0.00 \\
-secret-wrong-namespace & Secret & \texttt{/data} & yes & 0.00 \\
+secret-ref-wrong-name & Secret & \texttt{/apiVersion} & yes & 0.08 \\
+secret-ref-wrong-name & Secret & \texttt{/kind} & yes & 0.22 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/creationTimestamp} & yes & -0.05 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/namespace} & yes & 0.00 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/resourceVersion} & yes & -0.05 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/uid} & yes & -0.10 \\
+secret-ref-wrong-name & Secret & \texttt{/type} & yes & 0.00 \\
+secret-ref-wrong-name & Secret & \texttt{/data} & yes & -0.05 \\
 service-port-mismatch & Service & \texttt{/apiVersion} & yes & 0.00 \\
 service-port-mismatch & Service & \texttt{/kind} & yes & 0.00 \\
 service-port-mismatch & Service & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
@@ -445,6 +398,129 @@ service-statefulset-port-mismatch & StatefulSet & \texttt{/status/readyReplicas}
 service-statefulset-port-mismatch & StatefulSet & \texttt{/status/replicas} & yes & 0.00 \\
 service-statefulset-port-mismatch & StatefulSet & \texttt{/status/updateRevision} & yes & 0.00 \\
 service-statefulset-port-mismatch & StatefulSet & \texttt{/status/updatedReplicas} & yes & 0.00 \\
+serviceaccount-wrong-name & Deployment & \texttt{/apiVersion} & yes & 0.05 \\
+serviceaccount-wrong-name & Deployment & \texttt{/kind} & yes & 0.53 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/annotations} & yes & 0.05 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/creationTimestamp} & yes & -0.07 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/generation} & yes & 0.20 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/name} & no & 0.05 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/namespace} & yes & 0.83 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/labels} & yes & 0.58 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/resourceVersion} & yes & 0.80 \\
+serviceaccount-wrong-name & Deployment & \texttt{/metadata/uid} & yes & 0.08 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/progressDeadlineSeconds} & yes & 0.75 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/replicas} & yes & 0.33 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & yes & 0.75 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & no & 0.62 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & yes & 0.78 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & yes & 0.73 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/strategy/type} & yes & 0.38 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & 0.05 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.75 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.35 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & 0.03 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & 0.75 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.73 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.35 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.53 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & 0.05 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & 0.33 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & 0.25 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & 0.62 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & 0.83 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & 0.85 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.70 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/message} & yes & 0.00 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.12 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/status} & yes & 0.05 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/conditions/*/type} & yes & 0.30 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/observedGeneration} & yes & 0.10 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/replicas} & yes & 0.15 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & yes & 0.23 \\
+serviceaccount-wrong-name & Deployment & \texttt{/status/updatedReplicas} & yes & 0.20 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/apiVersion} & yes & 0.85 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/kind} & yes & 0.85 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/creationTimestamp} & yes & -0.07 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/namespace} & yes & 0.05 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/labels} & yes & 0.00 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/resourceVersion} & yes & 0.05 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/uid} & yes & 0.15 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/automountServiceAccountToken} & yes & 0.18 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/apiVersion} & yes & 0.18 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/kind} & yes & -0.05 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/creationTimestamp} & yes & 0.12 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/generation} & yes & 0.25 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/name} & no & 0.42 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/namespace} & yes & 0.30 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/metadata/labels}} & yes & 0.88 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/resourceVersion} & yes & -0.03 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/metadata/uid} & yes & 0.03 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/podManagementPolicy} & yes & 0.03 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/serviceName} & no & 0.42 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/replicas} & yes & 0.20 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/revisionHistoryLimit} & yes & 0.25 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/metadata/creationTimestamp} & yes & 0.42 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/name} & no & 0.25 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/image} & no & 0.20 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/containers/*/imagePullPolicy}} & yes & 0.72 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.18 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/containers/*/terminationMessagePolicy}} & yes & 0.70 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & -0.03 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & 0.15 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/dnsPolicy}} & yes & 0.62 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/restartPolicy}} & yes & 0.47 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/schedulerName}} & yes & 0.72 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/template/spec/terminationGracePeriodSeconds}} & yes & 0.45 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/spec/updateStrategy/rollingUpdate/partition}} & yes & 0.45 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/updateStrategy/type} & yes & 0.28 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/availableReplicas}} & yes & 0.53 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/collisionCount}} & yes & 0.72 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/currentReplicas}} & yes & 0.75 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/currentRevision} & yes & 0.20 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/observedGeneration} & yes & 0.28 \\
+statefulset-selector-mismatch & StatefulSet & \textbf{\texttt{/status/readyReplicas}} & yes & 0.47 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/replicas} & yes & 0.22 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/updateRevision} & yes & 0.22 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/status/updatedReplicas} & yes & 0.28 \\
+statefulset-selector-mismatch & Service & \textbf{\texttt{/apiVersion}} & yes & 0.45 \\
+statefulset-selector-mismatch & Service & \texttt{/kind} & yes & -0.03 \\
+statefulset-selector-mismatch & Service & \texttt{/metadata/creationTimestamp} & yes & 0.03 \\
+statefulset-selector-mismatch & Service & \texttt{/metadata/name} & no & 0.40 \\
+statefulset-selector-mismatch & Service & \texttt{/metadata/namespace} & yes & 0.00 \\
+statefulset-selector-mismatch & Service & \texttt{/metadata/labels} & yes & -0.03 \\
+statefulset-selector-mismatch & Service & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
+statefulset-selector-mismatch & Service & \texttt{/metadata/uid} & yes & -0.10 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/type} & yes & -0.03 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/clusterIP} & yes & -0.05 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/internalTrafficPolicy} & yes & -0.05 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/ipFamilies/*} & yes & -0.07 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/ipFamilyPolicy} & yes & -0.07 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/sessionAffinity} & yes & -0.03 \\
+statefulset-selector-mismatch & Service & \textbf{\texttt{/spec/selector}} & yes & 0.55 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/ports/*/port} & no & -0.10 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/ports/*/targetPort} & yes & -0.10 \\
+statefulset-selector-mismatch & Service & \texttt{/spec/ports/*/protocol} & yes & 0.07 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/apiVersion} & yes & -0.10 \\
+storageclass-wrong-name & PersistentVolumeClaim & \textbf{\texttt{/kind}} & yes & 0.72 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/creationTimestamp} & yes & 0.25 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/name} & no & 0.12 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/namespace} & yes & -0.08 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/labels} & yes & -0.08 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/resourceVersion} & yes & -0.15 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/metadata/uid} & yes & -0.08 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/accessModes/*} & no & -0.18 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/resources/requests/storage} & no & -0.15 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/volumeMode} & yes & -0.10 \\
+storageclass-wrong-name & PersistentVolumeClaim & \textbf{\texttt{/status/phase}} & yes & 0.82 \\
+storageclass-wrong-name & StorageClass & \texttt{/apiVersion} & yes & -0.10 \\
+storageclass-wrong-name & StorageClass & \texttt{/kind} & yes & -0.15 \\
+storageclass-wrong-name & StorageClass & \texttt{/metadata/creationTimestamp} & yes & 0.47 \\
+storageclass-wrong-name & StorageClass & \texttt{/metadata/labels} & yes & -0.08 \\
+storageclass-wrong-name & StorageClass & \texttt{/metadata/resourceVersion} & yes & -0.08 \\
+storageclass-wrong-name & StorageClass & \texttt{/metadata/uid} & yes & 0.00 \\
+storageclass-wrong-name & StorageClass & \texttt{/provisioner} & no & -0.03 \\
+storageclass-wrong-name & StorageClass & \texttt{/reclaimPolicy} & yes & -0.08 \\
+storageclass-wrong-name & StorageClass & \texttt{/volumeBindingMode} & yes & -0.10 \\
 \bottomrule
 \end{tabular}
 
@@ -457,14 +533,16 @@ service-statefulset-port-mismatch & StatefulSet & \texttt{/status/updatedReplica
 \toprule
 Scenario & Kind & Field & Valid & Recognized \\
 \midrule
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & yes & 0.93 \\
-ingress-backend-wrong-port & Ingress & \texttt{/spec/rules/*/http/paths/*/backend/service/port/number} & yes & 0.82 \\
-job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.28 \\
-secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.93 \\
-secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/secret/secretName} & yes & 0.93 \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.05 \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & yes & 0.10 \\
+ingress-backend-wrong-port & Ingress & \texttt{/spec/rules/*/http/paths/*/backend/service/port/number} & yes & 0.62 \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/spec/selector/matchLabels} & no & 0.80 \\
+rolebinding-role-wrong-name & RoleBinding & \texttt{/roleRef/name} & no & 0.07 \\
+secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.62 \\
 service-port-mismatch & Service & \texttt{/spec/ports/*/targetPort} & yes & 1.00 \\
 service-statefulset-port-mismatch & Service & \texttt{/spec/ports/*/targetPort} & yes & 1.00 \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/serviceAccountName} & yes & 1.00 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/selector/matchLabels} & no & 1.00 \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/storageClassName} & yes & 0.85 \\
 \bottomrule
 \end{tabular}
 
@@ -478,14 +556,16 @@ service-statefulset-port-mismatch & Service & \texttt{/spec/ports/*/targetPort} 
 \toprule
 Scenario & Kind & Field & Valid & NoFault rate & Fault rate \\
 \midrule
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.07 & 0.93 \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & no & 0.05 & 0.95 \\
 ingress-backend-wrong-port & Service & \texttt{/spec/ports/*/port} & no & 0.00 & 1.00 \\
-job-secret-wrong-name & Secret & \texttt{/metadata/name} & no & 0.00 & 1.00 \\
-secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.07 & 0.93 \\
-secret-volume-wrong-name & Secret & \texttt{/metadata/name} & no & 0.33 & 0.68 \\
-secret-wrong-namespace & Secret & \texttt{/metadata/namespace} & yes & 0.28 & 0.72 \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.07 & 0.93 \\
+rolebinding-role-wrong-name & Role & \texttt{/metadata/name} & no & 0.17 & 0.82 \\
+secret-ref-wrong-name & Secret & \texttt{/metadata/name} & no & 0.05 & 0.95 \\
 service-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.00 & 1.00 \\
 service-statefulset-port-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.00 & 1.00 \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/name} & no & 0.93 & 0.07 \\
+statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/metadata/labels} & yes & 0.85 & 0.15 \\
+storageclass-wrong-name & StorageClass & \texttt{/metadata/name} & no & 0.33 & 0.68 \\
 \bottomrule
 \end{tabular}
 
@@ -494,8 +574,8 @@ service-statefulset-port-mismatch & StatefulSet & \texttt{/spec/template/spec/co
 \toprule
 Scenario & NoFaultFound rate \\
 \midrule
-healthy-bundle & 1.00 \\
-healthy-rbac & 1.00 \\
+healthy-bundle & 0.90 \\
+healthy-rbac & 0.88 \\
 healthy-web-stack & 1.00 \\
 \bottomrule
 \end{tabular}
@@ -509,8 +589,8 @@ Scenario & Kind & Field & Valid & FP rate \\
 \midrule
 healthy-bundle & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/kind} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/metadata/annotations} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/metadata/creationTimestamp} & yes & 0.03 \\
+healthy-bundle & Deployment & \texttt{/metadata/annotations} & yes & 0.10 \\
+healthy-bundle & Deployment & \texttt{/metadata/creationTimestamp} & yes & 0.12 \\
 healthy-bundle & Deployment & \texttt{/metadata/generation} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/metadata/name} & no & 0.00 \\
 healthy-bundle & Deployment & \texttt{/metadata/namespace} & yes & 0.00 \\
@@ -527,80 +607,80 @@ healthy-bundle & Deployment & \texttt{/spec/strategy/type} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/metadata/labels} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/name} & no & 0.00 \\
-healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & 0.00 \\
+healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/image} & no & 0.07 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.10 \\
-healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & yes & 0.07 \\
+healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & yes & 0.23 \\
+healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & yes & 0.07 \\
+healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & yes & 0.15 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/dnsPolicy} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/restartPolicy} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/schedulerName} & yes & 0.00 \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/availableReplicas} & yes & 0.00 \\
+healthy-bundle & Deployment & \texttt{/status/availableReplicas} & yes & 0.07 \\
 healthy-bundle & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/conditions/*/message} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/conditions/*/status} & yes & 0.03 \\
-healthy-bundle & Deployment & \texttt{/status/conditions/*/type} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/observedGeneration} & yes & 0.00 \\
-healthy-bundle & Deployment & \texttt{/status/readyReplicas} & yes & 0.00 \\
+healthy-bundle & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & yes & 0.10 \\
+healthy-bundle & Deployment & \texttt{/status/conditions/*/message} & yes & 0.20 \\
+healthy-bundle & Deployment & \texttt{/status/conditions/*/reason} & yes & 0.15 \\
+healthy-bundle & Deployment & \texttt{/status/conditions/*/status} & yes & 0.07 \\
+healthy-bundle & Deployment & \texttt{/status/conditions/*/type} & yes & 0.03 \\
+healthy-bundle & Deployment & \texttt{/status/observedGeneration} & yes & 0.07 \\
+healthy-bundle & Deployment & \texttt{/status/readyReplicas} & yes & 0.38 \\
 healthy-bundle & Deployment & \texttt{/status/replicas} & yes & 0.03 \\
-healthy-bundle & Deployment & \texttt{/status/updatedReplicas} & yes & 0.00 \\
-healthy-bundle & ConfigMap & \texttt{/apiVersion} & yes & 0.07 \\
-healthy-bundle & ConfigMap & \texttt{/kind} & yes & 0.10 \\
+healthy-bundle & Deployment & \texttt{/status/updatedReplicas} & yes & 0.30 \\
+healthy-bundle & ConfigMap & \texttt{/apiVersion} & yes & 0.20 \\
+healthy-bundle & ConfigMap & \texttt{/kind} & yes & 0.12 \\
 healthy-bundle & ConfigMap & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-healthy-bundle & ConfigMap & \texttt{/metadata/name} & no & 0.05 \\
-healthy-bundle & ConfigMap & \texttt{/metadata/namespace} & yes & 0.00 \\
+healthy-bundle & ConfigMap & \texttt{/metadata/name} & no & 0.07 \\
+healthy-bundle & ConfigMap & \texttt{/metadata/namespace} & yes & 0.07 \\
 healthy-bundle & ConfigMap & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
 healthy-bundle & ConfigMap & \texttt{/metadata/uid} & yes & 0.00 \\
-healthy-bundle & ConfigMap & \texttt{/data} & yes & 0.00 \\
+healthy-bundle & ConfigMap & \texttt{/data} & yes & 0.07 \\
 healthy-bundle & Secret & \texttt{/apiVersion} & yes & 0.00 \\
-healthy-bundle & Secret & \texttt{/kind} & yes & 0.00 \\
-healthy-bundle & Secret & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-healthy-bundle & Secret & \texttt{/metadata/name} & no & 0.00 \\
+healthy-bundle & Secret & \texttt{/kind} & yes & 0.03 \\
+healthy-bundle & Secret & \texttt{/metadata/creationTimestamp} & yes & 0.07 \\
+healthy-bundle & Secret & \texttt{/metadata/name} & no & 0.07 \\
 healthy-bundle & Secret & \texttt{/metadata/namespace} & yes & 0.00 \\
 healthy-bundle & Secret & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
 healthy-bundle & Secret & \texttt{/metadata/uid} & yes & 0.00 \\
 healthy-bundle & Secret & \texttt{/type} & yes & 0.00 \\
 healthy-bundle & Secret & \texttt{/data} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/apiVersion} & yes & 0.00 \\
+healthy-rbac & RoleBinding & \texttt{/apiVersion} & yes & 0.07 \\
 healthy-rbac & RoleBinding & \texttt{/kind} & yes & 0.00 \\
 healthy-rbac & RoleBinding & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
 healthy-rbac & RoleBinding & \texttt{/metadata/name} & no & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/metadata/namespace} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/metadata/labels} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/metadata/uid} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/subjects/*/kind} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/subjects/*/name} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/subjects/*/namespace} & yes & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/roleRef/kind} & no & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/roleRef/name} & no & 0.00 \\
-healthy-rbac & RoleBinding & \texttt{/roleRef/apiGroup} & no & 0.00 \\
-healthy-rbac & Role & \texttt{/apiVersion} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/kind} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/metadata/name} & no & 0.00 \\
-healthy-rbac & Role & \texttt{/metadata/namespace} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/metadata/labels} & yes & 0.00 \\
+healthy-rbac & RoleBinding & \texttt{/metadata/namespace} & yes & 0.15 \\
+healthy-rbac & RoleBinding & \texttt{/metadata/labels} & yes & 0.07 \\
+healthy-rbac & RoleBinding & \texttt{/metadata/resourceVersion} & yes & 0.75 \\
+healthy-rbac & RoleBinding & \texttt{/metadata/uid} & yes & 0.33 \\
+healthy-rbac & RoleBinding & \texttt{/subjects/*/kind} & yes & 1.00 \\
+healthy-rbac & RoleBinding & \texttt{/subjects/*/name} & yes & 0.05 \\
+healthy-rbac & RoleBinding & \texttt{/subjects/*/namespace} & yes & 0.03 \\
+healthy-rbac & RoleBinding & \texttt{/roleRef/kind} & no & 0.17 \\
+healthy-rbac & RoleBinding & \texttt{/roleRef/name} & no & 0.05 \\
+healthy-rbac & RoleBinding & \texttt{/roleRef/apiGroup} & no & 0.05 \\
+healthy-rbac & Role & \texttt{/apiVersion} & yes & 0.28 \\
+healthy-rbac & Role & \texttt{/kind} & yes & 0.35 \\
+healthy-rbac & Role & \texttt{/metadata/creationTimestamp} & yes & 0.05 \\
+healthy-rbac & Role & \texttt{/metadata/name} & no & 0.20 \\
+healthy-rbac & Role & \texttt{/metadata/namespace} & yes & 0.05 \\
+healthy-rbac & Role & \texttt{/metadata/labels} & yes & 0.17 \\
 healthy-rbac & Role & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/metadata/uid} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/rules/*/apiGroups/*} & yes & 0.00 \\
-healthy-rbac & Role & \texttt{/rules/*/resources/*} & yes & 0.00 \\
+healthy-rbac & Role & \texttt{/metadata/uid} & yes & 0.05 \\
+healthy-rbac & Role & \texttt{/rules/*/apiGroups/*} & yes & 0.07 \\
+healthy-rbac & Role & \texttt{/rules/*/resources/*} & yes & 0.03 \\
 healthy-rbac & Role & \texttt{/rules/*/verbs/*} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/apiVersion} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/kind} & yes & 0.00 \\
+healthy-rbac & ServiceAccount & \texttt{/apiVersion} & yes & 0.03 \\
+healthy-rbac & ServiceAccount & \texttt{/kind} & yes & 0.30 \\
 healthy-rbac & ServiceAccount & \texttt{/metadata/creationTimestamp} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/metadata/name} & no & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/metadata/namespace} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/metadata/labels} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/metadata/resourceVersion} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/metadata/uid} & yes & 0.00 \\
-healthy-rbac & ServiceAccount & \texttt{/automountServiceAccountToken} & yes & 0.00 \\
+healthy-rbac & ServiceAccount & \texttt{/metadata/name} & no & 0.05 \\
+healthy-rbac & ServiceAccount & \texttt{/metadata/namespace} & yes & 0.05 \\
+healthy-rbac & ServiceAccount & \texttt{/metadata/labels} & yes & 0.10 \\
+healthy-rbac & ServiceAccount & \texttt{/metadata/resourceVersion} & yes & 0.07 \\
+healthy-rbac & ServiceAccount & \texttt{/metadata/uid} & yes & 0.05 \\
+healthy-rbac & ServiceAccount & \texttt{/automountServiceAccountToken} & yes & 0.03 \\
 healthy-web-stack & Deployment & \texttt{/apiVersion} & yes & 0.00 \\
 healthy-web-stack & Deployment & \texttt{/kind} & yes & 0.00 \\
 healthy-web-stack & Deployment & \texttt{/metadata/annotations} & yes & 0.00 \\
@@ -689,60 +769,77 @@ healthy-web-stack & HorizontalPodAutoscaler & \texttt{/status/desiredReplicas} &
 \bottomrule
 \end{tabular}
 
-% Table 4 — below the #12 baseline gate (acc < 0.80): excluded from the
-% maps above; the model cannot reliably diagnose the full manifest.
-\begin{tabular}{llr}
+% Table 4 — excluded by the gate. baseline: accuracy on the full manifest
+% below 0.80. twin: the 95% Newcombe CI of Youden's J does not exclude 0 —
+% the model answers the same whether or not the fault is present (lesson 1
+% bias), so its saliency would measure what shakes the reflex, not signal.
+\begin{tabular}{llrcl}
 \toprule
-Scenario & Fault & Baseline acc \\
+Scenario & Fault & Baseline acc & J & Excluded by \\
 \midrule
-clusterrolebinding-role-wrong-name & Ref\_NotFound & 0.00 \\
-configmap-volume-wrong-name & Ref\_NotFound & 0.00 \\
-daemonset-selector-mismatch & SelectorMismatch & 0.00 \\
-env-key-wrong-name & Ref\_NotFound & 0.07 \\
-hpa-target-wrong-name & Ref\_NotFound & 0.00 \\
-imagepull-secret-wrong-name & Ref\_NotFound & 0.68 \\
-ingress-backend-wrong-name & Ref\_NotFound & 0.00 \\
-networkpolicy-selector-mismatch & SelectorMismatch & 0.15 \\
-pdb-selector-mismatch & SelectorMismatch & 0.38 \\
-priorityclass-wrong-name & Ref\_NotFound & 0.00 \\
-pvc-claim-wrong-name & Ref\_NotFound & 0.00 \\
-replicaset-selector-mismatch & SelectorMismatch & 0.33 \\
-rolebinding-role-wrong-name & Ref\_NotFound & 0.00 \\
-rolebinding-subject-wrong-name & Ref\_NotFound & 0.00 \\
-selector-label-mismatch & SelectorMismatch & 0.00 \\
-service-selector-mismatch & SelectorMismatch & 0.05 \\
-serviceaccount-wrong-name & Ref\_NotFound & 0.60 \\
-statefulset-selector-mismatch & SelectorMismatch & 0.78 \\
-storageclass-wrong-name & Ref\_NotFound & 0.78 \\
-volumemount-wrong-name & Ref\_NotFound & 0.00 \\
-vpa-target-wrong-name & Ref\_NotFound & 0.00 \\
+clusterrolebinding-role-wrong-name & Ref\_NotFound & 0.72 & 0.65 [0.45, 0.77] & baseline \\
+configmap-ref-crowded & Ref\_NotFound & 0.10 & 0.10 [-0.01, 0.23] & baseline+twin \\
+configmap-volume-wrong-name & Ref\_NotFound & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
+daemonset-selector-mismatch & SelectorMismatch & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
+env-key-wrong-name & Ref\_NotFound & 0.10 & 0.10 [-0.01, 0.23] & baseline+twin \\
+hpa-target-wrong-name & Ref\_NotFound & 0.35 & 0.35 [0.19, 0.50] & baseline \\
+imagepull-secret-wrong-name & Ref\_NotFound & 0.88 & -0.12 [-0.26, -0.01] & twin \\
+ingress-backend-wrong-name & Ref\_NotFound & 0.00 & -0.85 [-0.93, -0.68] & baseline+twin \\
+job-secret-wrong-name & Ref\_NotFound & 1.00 & 0.00 [-0.09, 0.09] & twin \\
+networkpolicy-selector-mismatch & SelectorMismatch & 0.25 & 0.12 [-0.05, 0.29] & baseline+twin \\
+priorityclass-wrong-name & Ref\_NotFound & 0.10 & 0.10 [-0.01, 0.23] & baseline+twin \\
+pvc-claim-wrong-name & Ref\_NotFound & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
+replicaset-selector-mismatch & SelectorMismatch & 0.28 & 0.28 [0.13, 0.43] & baseline \\
+rolebinding-subject-wrong-name & Ref\_NotFound & 0.85 & 0.17 [-0.01, 0.35] & twin \\
+secret-ref-crowded & Ref\_NotFound & 0.35 & 0.35 [0.19, 0.50] & baseline \\
+secret-volume-crowded & Ref\_NotFound & 0.07 & 0.07 [-0.03, 0.20] & baseline+twin \\
+secret-volume-wrong-name & Ref\_NotFound & 0.60 & 0.60 [0.42, 0.74] & baseline \\
+secret-wrong-namespace & Ref\_NotFound & 1.00 & 0.00 [-0.09, 0.09] & twin \\
+selector-label-mismatch & SelectorMismatch & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
+service-port-crowded & PortMismatch & 0.17 & 0.17 [0.05, 0.32] & baseline \\
+service-selector-mismatch & SelectorMismatch & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
+volumemount-wrong-name & Ref\_NotFound & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
+vpa-target-wrong-name & Ref\_NotFound & 0.00 & 0.00 [-0.09, 0.09] & baseline+twin \\
 \bottomrule
 \end{tabular}
 
 % Table 6 — localization: baseline trials with the correct fault_class,
 % fraction whose offending_field pointed at a deciding locus (suffix match
 % on the last two path segments; document identity is not attributable in a
-% free-form path). Low rate = right answer, wrong reason.
-\begin{tabular}{lrrr}
+% free-form path). This measures the model's ability to REPORT the fault's
+% address, not whether detection is anchored on it — Table 2a shows whether
+% the diagnosis collapses once the locus is removed. Low rate here + high
+% Recognized there = the model detects the anomaly but misreports the path
+% (e.g. blames the healthy sibling reference). Top blamed = the most
+% frequent offending_field among those trials, with its share.
+\begin{tabular}{lrrrl}
 \toprule
-Scenario & Correct baselines & Localized & Rate \\
+Scenario & Correct baselines & Localized & Rate & Top blamed \\
 \midrule
-configmap-ref-wrong-name & 37 & 0 & 0.00 \\
-env-key-wrong-name & 3 & 0 & 0.00 \\
-imagepull-secret-wrong-name & 27 & 27 & 1.00 \\
-ingress-backend-wrong-port & 40 & 39 & 0.97 \\
-job-secret-wrong-name & 40 & 40 & 1.00 \\
-networkpolicy-selector-mismatch & 6 & 3 & 0.50 \\
-pdb-selector-mismatch & 15 & 10 & 0.67 \\
-replicaset-selector-mismatch & 13 & 13 & 1.00 \\
-secret-ref-wrong-name & 36 & 32 & 0.89 \\
-secret-volume-wrong-name & 35 & 26 & 0.74 \\
-secret-wrong-namespace & 37 & 36 & 0.97 \\
-service-port-mismatch & 40 & 40 & 1.00 \\
-service-selector-mismatch & 2 & 0 & 0.00 \\
-service-statefulset-port-mismatch & 40 & 40 & 1.00 \\
-serviceaccount-wrong-name & 24 & 10 & 0.42 \\
-statefulset-selector-mismatch & 31 & 26 & 0.84 \\
-storageclass-wrong-name & 31 & 31 & 1.00 \\
+clusterrolebinding-role-wrong-name & 29 & 8 & 0.28 & \texttt{subjects[0].name} (0.21) \\
+configmap-ref-crowded & 4 & 4 & 1.00 & \texttt{spec.template.spec.containers[0].envFrom[0].configMapRef.name} (0.75) \\
+configmap-ref-wrong-name & 36 & 2 & 0.06 & \texttt{spec.template.spec.containers[0].envFrom[1].secretRef.name} (0.42) \\
+env-key-wrong-name & 4 & 0 & 0.00 & \texttt{.spec.template.spec.containers[0].env[0].valueFrom.configMapKeyRef.name} (0.75) \\
+hpa-target-wrong-name & 14 & 13 & 0.93 & \texttt{spec.scaleTargetRef.name} (0.93) \\
+imagepull-secret-wrong-name & 35 & 34 & 0.97 & \texttt{.spec.template.spec.imagePullSecrets[0].name} (0.54) \\
+ingress-backend-wrong-port & 40 & 36 & 0.90 & \texttt{spec.rules[0].http.paths[0].backend.service.port.number} (0.35) \\
+job-secret-wrong-name & 40 & 40 & 1.00 & \texttt{.spec.template.spec.containers[0].envFrom[0].secretRef.name} (0.57) \\
+networkpolicy-selector-mismatch & 10 & 3 & 0.30 & \texttt{spec/podSelector/matchLabels/app} (0.30) \\
+pdb-selector-mismatch & 35 & 13 & 0.37 & \texttt{spec.selector.matchLabels.app} (0.23) \\
+priorityclass-wrong-name & 4 & 0 & 0.00 & \texttt{spec.strategy.rollingUpdate.maxSurge} (0.50) \\
+replicaset-selector-mismatch & 11 & 10 & 0.91 & \texttt{spec.selector.matchLabels.app} (0.64) \\
+rolebinding-role-wrong-name & 39 & 26 & 0.67 & \texttt{roleRef.name} (0.67) \\
+rolebinding-subject-wrong-name & 34 & 9 & 0.26 & \texttt{roleRef.name} (0.74) \\
+secret-ref-crowded & 14 & 11 & 0.79 & \texttt{spec.template.spec.containers[0].envFrom[1].secretRef.name} (0.64) \\
+secret-ref-wrong-name & 36 & 31 & 0.86 & \texttt{.spec.template.spec.containers[0].envFrom[1].secretRef.name} (0.47) \\
+secret-volume-crowded & 3 & 3 & 1.00 & \texttt{spec.template.spec.volumes[0].secret.secretName} (1.00) \\
+secret-volume-wrong-name & 24 & 18 & 0.75 & \texttt{spec.template.spec.volumes[0].secret.secretName} (0.46) \\
+secret-wrong-namespace & 40 & 39 & 0.97 & \texttt{spec.template.spec.containers[0].envFrom[0].secretRef.name} (0.62) \\
+service-port-crowded & 7 & 7 & 1.00 & \texttt{spec/ports[0]/targetPort} (1.00) \\
+service-port-mismatch & 40 & 40 & 1.00 & \texttt{spec/ports[0]/targetPort} (0.88) \\
+service-statefulset-port-mismatch & 40 & 40 & 1.00 & \texttt{spec/ports[0]/targetPort} (0.88) \\
+serviceaccount-wrong-name & 37 & 29 & 0.78 & \texttt{spec.template.spec.serviceAccountName} (0.43) \\
+statefulset-selector-mismatch & 35 & 20 & 0.57 & \texttt{spec.selector.matchLabels.app} (0.46) \\
+storageclass-wrong-name & 33 & 33 & 1.00 & \texttt{spec.storageClassName} (0.55) \\
 \bottomrule
 \end{tabular}

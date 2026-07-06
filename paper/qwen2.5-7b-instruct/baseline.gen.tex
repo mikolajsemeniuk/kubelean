@@ -94,6 +94,255 @@ metadata:
 automountServiceAccountToken: true
 \end{verbatim}
 
+% scenario: configmap-ref-crowded — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: worker
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "836150"
+  uid: e6a94d27-503b-4f18-9c6d-84b1f2e07a53
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: worker
+    spec:
+      serviceAccountName: worker-sa
+      containers:
+        - name: worker
+          image: ghcr.io/acme/worker:1.9.4
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: team-config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: team-config-v2
+  namespace: production
+  resourceVersion: "294781"
+  uid: 0d52c8f1-7e94-4b36-a2d8-5f60b3a19e47
+data:
+  QUEUE: jobs
+  WORKERS: 4
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: worker-sa
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "573629"
+  uid: b2e07c54-186f-4da3-9e51-c7a4d8f36b90
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: queue-reader
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "508936"
+  uid: 1b8e64f2-c059-4d83-a7e1-96b3d24c5f70
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: queue-reader-binding
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "120473"
+  uid: 76c2a9e8-4f31-4b57-8d09-e3a51c68b294
+subjects:
+  - kind: ServiceAccount
+    name: worker-sa
+    namespace: production
+roleRef:
+  kind: Role
+  name: queue-reader
+  apiGroup: rbac.authorization.k8s.io
+\end{verbatim}
+
+% scenario: configmap-ref-crowded-twin — fault: NoFaultFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: worker
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "836150"
+  uid: e6a94d27-503b-4f18-9c6d-84b1f2e07a53
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: worker
+    spec:
+      serviceAccountName: worker-sa
+      containers:
+        - name: worker
+          image: ghcr.io/acme/worker:1.9.4
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: team-config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: team-config
+  namespace: production
+  resourceVersion: "294781"
+  uid: 0d52c8f1-7e94-4b36-a2d8-5f60b3a19e47
+data:
+  QUEUE: jobs
+  WORKERS: 4
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: worker-sa
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "573629"
+  uid: b2e07c54-186f-4da3-9e51-c7a4d8f36b90
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: queue-reader
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "508936"
+  uid: 1b8e64f2-c059-4d83-a7e1-96b3d24c5f70
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: queue-reader-binding
+  namespace: production
+  labels:
+    app: worker
+  resourceVersion: "120473"
+  uid: 76c2a9e8-4f31-4b57-8d09-e3a51c68b294
+subjects:
+  - kind: ServiceAccount
+    name: worker-sa
+    namespace: production
+roleRef:
+  kind: Role
+  name: queue-reader
+  apiGroup: rbac.authorization.k8s.io
+\end{verbatim}
+
 % scenario: configmap-ref-wrong-name — fault: Ref_NotFound
 \begin{verbatim}
 apiVersion: apps/v1
@@ -592,7 +841,7 @@ spec:
             - containerPort: 8080
               protocol: TCP
           env:
-            - name: LOG_FORMAT
+            - name: APP_LOGGING
               valueFrom:
                 configMapKeyRef:
                   key: LOG_FORMAT
@@ -672,7 +921,7 @@ spec:
             - containerPort: 8080
               protocol: TCP
           env:
-            - name: LOG_LEVEL
+            - name: APP_LOGGING
               valueFrom:
                 configMapKeyRef:
                   key: LOG_LEVEL
@@ -2911,6 +3160,277 @@ metadata:
 automountServiceAccountToken: true
 \end{verbatim}
 
+% scenario: secret-ref-crowded — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: api
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "618442"
+  uid: 7c3f2e81-9a45-4d1b-8e67-2b9c4f0a5d13
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: api
+    spec:
+      serviceAccountName: api-runner
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: cache-api
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: api-data
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-cache
+  namespace: production
+  resourceVersion: "224917"
+  uid: f24a8c96-3e57-4b02-9d18-c67a1e84b5f0
+type: Opaque
+data:
+  CACHE_URL: cmVkYWN0ZWQtY2FjaGUtdXJs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-config
+  namespace: production
+  resourceVersion: "837156"
+  uid: 9b615f38-d2c4-47a9-b3e5-081f7d62c9a4
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-runner
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "149528"
+  uid: 4e8a17d5-6f92-4c38-a1b0-d95c3e2f8746
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-data
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "962371"
+  uid: a17e94c2-58b3-4f6d-92c8-3d40e6b1f759
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  volumeMode: Filesystem
+status:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 5Gi
+  phase: Bound
+\end{verbatim}
+
+% scenario: secret-ref-crowded-twin — fault: NoFaultFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: api
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "618442"
+  uid: 7c3f2e81-9a45-4d1b-8e67-2b9c4f0a5d13
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: api
+    spec:
+      serviceAccountName: api-runner
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: cache-api
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: api-data
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: cache-api
+  namespace: production
+  resourceVersion: "224917"
+  uid: f24a8c96-3e57-4b02-9d18-c67a1e84b5f0
+type: Opaque
+data:
+  CACHE_URL: cmVkYWN0ZWQtY2FjaGUtdXJs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-config
+  namespace: production
+  resourceVersion: "837156"
+  uid: 9b615f38-d2c4-47a9-b3e5-081f7d62c9a4
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-runner
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "149528"
+  uid: 4e8a17d5-6f92-4c38-a1b0-d95c3e2f8746
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-data
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "962371"
+  uid: a17e94c2-58b3-4f6d-92c8-3d40e6b1f759
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  volumeMode: Filesystem
+status:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 5Gi
+  phase: Bound
+\end{verbatim}
+
 % scenario: secret-ref-wrong-name — fault: Ref_NotFound
 \begin{verbatim}
 apiVersion: apps/v1
@@ -3094,6 +3614,257 @@ type: Opaque
 data:
   API_KEY: cmVkYWN0ZWQtYXBpLWtleQ==
   DB_PASSWORD: cmVkYWN0ZWQtcGFzc3dvcmQ=
+\end{verbatim}
+
+% scenario: secret-volume-crowded — fault: Ref_NotFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: api
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "528709"
+  uid: 5d29b7f4-1c86-4e53-b9a2-7f01d8c64e35
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: api
+    spec:
+      priorityClassName: api-critical
+      serviceAccountName: api-runner
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          envFrom:
+            - configMapRef:
+                name: api-config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          secret:
+            secretName: prod-api-tls
+status:
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+  observedGeneration: 1
+  replicas: 2
+  unavailableReplicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-tls
+  namespace: production
+  resourceVersion: "316584"
+  uid: e83c51a9-47d0-4b16-8f2e-95a6b3d7c012
+type: Opaque
+data:
+  tls.crt: cmVkYWN0ZWQtY2VydA==
+  tls.key: cmVkYWN0ZWQta2V5
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-critical
+  labels:
+    app: api
+  resourceVersion: "741296"
+  uid: 2f74d8b1-9e35-4a60-8c17-b5e29a4f6d83
+value: 1000000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: critical API pods
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-config
+  namespace: production
+  resourceVersion: "405163"
+  uid: b98f26e4-53a1-4d7c-9e08-6a2c5f81d4b7
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-runner
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "872645"
+  uid: 638d1a75-e4b9-4f28-a56c-90d7e3b8f142
+automountServiceAccountToken: true
+\end{verbatim}
+
+% scenario: secret-volume-crowded-twin — fault: NoFaultFound
+\begin{verbatim}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: api
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "528709"
+  uid: 5d29b7f4-1c86-4e53-b9a2-7f01d8c64e35
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: api
+    spec:
+      priorityClassName: api-critical
+      serviceAccountName: api-runner
+      containers:
+        - name: api
+          image: ghcr.io/acme/api:2.3.1
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          envFrom:
+            - configMapRef:
+                name: api-config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          secret:
+            secretName: prod-api-tls
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: prod-api-tls
+  namespace: production
+  resourceVersion: "316584"
+  uid: e83c51a9-47d0-4b16-8f2e-95a6b3d7c012
+type: Opaque
+data:
+  tls.crt: cmVkYWN0ZWQtY2VydA==
+  tls.key: cmVkYWN0ZWQta2V5
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-critical
+  labels:
+    app: api
+  resourceVersion: "741296"
+  uid: 2f74d8b1-9e35-4a60-8c17-b5e29a4f6d83
+value: 1000000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: critical API pods
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-config
+  namespace: production
+  resourceVersion: "405163"
+  uid: b98f26e4-53a1-4d7c-9e08-6a2c5f81d4b7
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: api-runner
+  namespace: production
+  labels:
+    app: api
+  resourceVersion: "872645"
+  uid: 638d1a75-e4b9-4f28-a56c-90d7e3b8f142
+automountServiceAccountToken: true
 \end{verbatim}
 
 % scenario: secret-volume-wrong-name — fault: Ref_NotFound
@@ -3539,6 +4310,244 @@ status:
   readyReplicas: 3
   replicas: 3
   updatedReplicas: 3
+\end{verbatim}
+
+% scenario: service-port-crowded — fault: PortMismatch
+\begin{verbatim}
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: payments
+  namespace: production
+  labels:
+    app: payments
+  resourceVersion: "293840"
+  uid: c45b92e7-8d13-4a6f-b704-1e58c9a2d6f3
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.101.57
+  clusterIPs:
+    - 10.96.101.57
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: payments
+  ports:
+    - port: 8080
+      targetPort: 3000
+      protocol: TCP
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: payments
+  namespace: production
+  labels:
+    app: payments
+  resourceVersion: "657092"
+  uid: 8a06e3d9-2b74-4c15-9f8e-d61a05b7c428
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: payments
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: payments
+    spec:
+      serviceAccountName: payments-sa
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: payments
+          image: ghcr.io/acme/payments:3.1.2
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: payments-sa
+  namespace: production
+  labels:
+    app: payments
+  resourceVersion: "384521"
+  uid: d5f183c6-a927-4e40-8b35-2c9e6f04a1d8
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: registry-credentials
+  namespace: production
+  resourceVersion: "764218"
+  uid: 39d7f5a1-6e82-4c04-b1f6-a48c27e95d30
+type: Opaque
+data:
+  .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
+\end{verbatim}
+
+% scenario: service-port-crowded-twin — fault: NoFaultFound
+\begin{verbatim}
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: payments
+  namespace: production
+  labels:
+    app: payments
+  resourceVersion: "293840"
+  uid: c45b92e7-8d13-4a6f-b704-1e58c9a2d6f3
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.101.57
+  clusterIPs:
+    - 10.96.101.57
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: payments
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  generation: 1
+  name: payments
+  namespace: production
+  labels:
+    app: payments
+  resourceVersion: "657092"
+  uid: 8a06e3d9-2b74-4c15-9f8e-d61a05b7c428
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: payments
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: payments
+    spec:
+      serviceAccountName: payments-sa
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: payments
+          image: ghcr.io/acme/payments:3.1.2
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 2
+  conditions:
+    - lastTransitionTime: "2026-06-01T09:00:00Z"
+      lastUpdateTime: "2026-06-01T09:00:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+  observedGeneration: 1
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: payments-sa
+  namespace: production
+  labels:
+    app: payments
+  resourceVersion: "384521"
+  uid: d5f183c6-a927-4e40-8b35-2c9e6f04a1d8
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: registry-credentials
+  namespace: production
+  resourceVersion: "764218"
+  uid: 39d7f5a1-6e82-4c04-b1f6-a48c27e95d30
+type: Opaque
+data:
+  .dockerconfigjson: cmVkYWN0ZWQtZG9ja2VyLWNvbmZpZw==
 \end{verbatim}
 
 % scenario: service-port-mismatch — fault: PortMismatch
@@ -4254,12 +5263,12 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: db
+      app: database
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: database
+        app: db
     spec:
       containers:
         - name: db
@@ -4290,6 +5299,33 @@ status:
   replicas: 3
   updateRevision: db-6d8f9c7b4
   updatedReplicas: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: db
+  namespace: production
+  labels:
+    app: db
+  resourceVersion: "418362"
+  uid: 83b7c9d1-52e6-4f0a-b1a4-9c27d3e8f615
+spec:
+  type: ClusterIP
+  clusterIP: None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+status:
+  loadBalancer: {}
 \end{verbatim}
 
 % scenario: statefulset-selector-mismatch-twin — fault: NoFaultFound
@@ -4348,6 +5384,33 @@ status:
   replicas: 3
   updateRevision: db-6d8f9c7b4
   updatedReplicas: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2026-06-01T09:00:00Z"
+  name: db
+  namespace: production
+  labels:
+    app: db
+  resourceVersion: "418362"
+  uid: 83b7c9d1-52e6-4f0a-b1a4-9c27d3e8f615
+spec:
+  type: ClusterIP
+  clusterIP: None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+status:
+  loadBalancer: {}
 \end{verbatim}
 
 % scenario: storageclass-wrong-name — fault: Ref_NotFound

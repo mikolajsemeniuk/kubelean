@@ -76,7 +76,7 @@ spec:
           {{- end }}
           {{- if .EnvKey }}
           env:
-            - name: {{ .EnvKey }}
+            - name: {{ .EnvName }}
               valueFrom:
                 configMapKeyRef:
                   key: {{ .EnvKey }}

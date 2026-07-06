@@ -31,6 +31,7 @@ type DeploymentParams struct {
 	VolumeRef          string // optional: the referenced name ("" omits the volume)
 	MountName          string // optional: volumeMounts[].name ("" defaults to "data", the volumes[].name)
 	EnvKey             string // optional: env[].valueFrom.configMapKeyRef.key ("" omits the env block)
+	EnvName            string // optional: env[].name ("" defaults to EnvKey)
 	EnvConfigMap       string // optional: env[].valueFrom.configMapKeyRef.name
 	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
 	Status             string // optional: StatusHealthy | StatusFailing ("" omits status)
@@ -44,9 +45,16 @@ var deploymentTemplate = template.Must(template.New("deploy").Parse(deployYAML))
 // NewDeployment renders a Deployment manifest from the given params. MountName
 // defaults to "data" (the volumes[].name) so existing callers render unchanged;
 // a divergent MountName is the volumeMount→volume dangling-reference fault.
+// EnvName defaults to EnvKey; a scenario injecting a wrong KEY must set a
+// distinct EnvName, or the var name echoes the missing key after the deciding
+// field is removed and the fault-deleting flip can never honestly read
+// NoFaultFound.
 func NewDeployment(p DeploymentParams) string {
 	if p.MountName == "" {
 		p.MountName = "data"
+	}
+	if p.EnvName == "" {
+		p.EnvName = p.EnvKey
 	}
 	return mustRender(deploymentTemplate, p)
 }

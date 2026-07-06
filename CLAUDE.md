@@ -47,37 +47,59 @@ levels) is not yet.
 - **`reduce()` — NOT STARTED.** It will wrap the same field-remover kernel and load
   m3's level→field-keys config. The kernel (`heatmap.Remove`) already exists.
 
-Catalog right now: **29 faulty scenarios (19 Ref\_NotFound / 7 SelectorMismatch /
-3 PortMismatch) + 29 healthy twins + 3 healthy controls = 61 entries, ~1700
+Catalog right now: **33 faulty scenarios (22 Ref\_NotFound / 7 SelectorMismatch /
+4 PortMismatch) + 33 healthy twins + 3 healthy controls = 69 entries, ~2000
 variants; 7 run-groups, 31 Kinds** (21 Kinds appear in scenarios — incl. Job,
 Ingress, NetworkPolicy, PDB since 2026-07). Class-balance rules that produced
 these numbers: every class ≥3–5 scenarios; the scored set must not be >50% one
 class (or a constant classifier inflates baselines); every field-key that m3 will
 claim anything about needs ≥2 scenarios where it is non-deciding (the
 cross-scenario profile — e.g. rolebinding-subject-wrong-name exists mainly to give
-roleRef.name a non-deciding appearance).
+roleRef.name a non-deciding appearance). The four `*-crowded` scenarios
+(2026-07-04) exist for that last rule at scale: each injects a fault from a
+pattern the 7B reliably scores uncrowded (envFrom ref ×2 / secret volume /
+targetPort) and packs the bundle with fully-healthy WITNESSES of
+under-profiled keys (serviceAccountName, claimName, priorityClassName,
+imagePullSecrets, roleRef/subjects…) — a witness needs no model competence, it
+only has to sit, resolving, in a gate-surviving scenario. Witness placement
+rule: never give a witness the same Kind as the scenario's Hides locus
+(ResolveLeaves resolves per Kind — a second Secret doc where Secret
+metadata.name decides becomes a bogus locus). Smoke-learned (k=2/4, honest):
+**crowding itself costs the 7B accuracy across every pattern** — secret-ref
+2/4 crowded vs 0.90 uncrowded, and the RBAC chain drowns both a port
+comparison (0/2 at targetPort 8000, 1/4 after switching to the more contrasty
+3000, 1/4 even slimmed to 4 docs) and a configmap ref (1/4). We deliberately
+did NOT slim further to sneak under the gate (that would be scenario-design
+overfitting); expect the crowded scenarios to gate out on 7B and score on the
+multi-model run — and note the pair {uncrowded, crowded} of the same fault is
+itself a controlled context-dilution measurement worth a paper paragraph.
 
 ### Next steps (queued — read before doing anything else)
 
-1. **The paper run is armed and waiting.** The final catalog (61 scenarios, ~1700
-   variants) is smoke-validated at k=3; the user launches the run themselves:
-   `make clean-data && make run-all K=40` (or group by group: `make run-<group> K=40`,
-   resumable — each scenario's shard is written on completion, so a crash costs at
-   most the in-flight scenario; rerunning a group overwrites only that group).
-   `make clean-data` first is REQUIRED: `data/qwen2.5-7b-instruct/` currently mixes
-   2 fresh K=40 shards (selector-label-mismatch + twin, from an aborted run) with 17
-   stale pre-catalog shards — rendering that mix would silently blend two different
-   YAML generations. Measured pace: ~15 min per faulty scenario at K=40 (~0.6 s/call
-   on qwen-7b), whole run ≈ 10–12 h. Afterwards: `make render`.
-2. **Three renderer artifacts are still TODO** (pure cmd/render work, no model
-   calls — can be built and tested against whatever shards exist):
-   - `fieldprofile.gen.tex` — the per-field-key aggregate across scenarios: in how
-     many scenarios each canonical field-key was measured, how often it was a
-     deciding locus, and its saliency distribution (mean/min/max + how many cells
-     were BH-signal) where it was NON-deciding. This is the direct input for m3
-     (levels group field-keys, not cells) and the main defense against the
-     circularity critique (a field's *marginal* signal across scenarios, independent
-     of where we injected the fault).
+1. **The 7B paper run is DONE (2026-07-03, K=40) and rendered.** Headline results:
+   only 7 of 29 faulty scenarios clear the (now dual) gate — 4 Ref_NotFound + all
+   3 PortMismatch, zero SelectorMismatch — and after the negative-control floor
+   only 5 saliency cells survive as signal (the two cross-sibling reference names
+   on top). The old "PortMismatch parked" claim is DEAD WRONG at K=40: the three
+   port scenarios are the strongest class (baselines 1.00, twin J 0.82–1.00).
+   **2026-07-04 changes make the NEXT produce run a mandatory FULL re-run** (never
+   mix with the 2026-07-03 shards): the Ref_NotFound description in faults.go was
+   broadened (prompt change ⇒ every scenario's prompt changed), and two scenarios
+   were regenerated — statefulset-selector-mismatch (dangling spec.serviceName
+   fixed: governing headless Service added, anomaly moved into the selector) and
+   env-key-wrong-name (env[].name decoupled from the key via EnvName so the var
+   name no longer echoes the missing key). Both pairs' 2026-07-03 shards are
+   stale-but-gated, so the current render stays honest; smoke before the re-run.
+2. **Two renderer artifacts are still TODO** (pure cmd/render work, no model
+   calls — can be built and tested against whatever shards exist).
+   DONE 2026-07-04 (cmd/render/figures.go, unit-tested): `fieldprofile.gen.tex`
+   (the per-field-key aggregate across scored scenarios — the m3 input and the
+   anti-circularity defense), plus two paper figures: `heatmapfig.gen.tex` (the
+   contrast map as TikZ — one dense grid per Kind, orange = signal, grey = no
+   marginal signal, dashed = negative control, dark* = deciding; requires
+   tikz) and `manifestfig.gen.tex` (the flagship scenario's YAML painted line
+   by line by verdict; flagship = most signal cells, data-chosen; requires
+   xcolor). Still TODO:
    - `power.gen.tex` — the auto-computed statistical-power paragraph: k, number of
      map cells m, FDR level, the minimal detectable effect at 80% power under the
      seed-paired McNemar + BH rule (lone-signal worst case: needs ≥⌈log2(2m/0.05)⌉
@@ -204,9 +226,21 @@ model. This split is mandated — see "measurement contract".
   (specificity) and Youden's J = both − 1 with a Newcombe CI (bold = CI excludes 0;
   J≈0 = pure bias). Twins are excluded from the saliency map, the control table,
   and Table 3.
-- **the gate (#12)** — a *faulty* scenario whose baseline accuracy is below a threshold
-  (`cmd/render -gate`, default 0.8) is excluded from the maps and reported in Table 4.
-  Saliency is meaningless if the model cannot diagnose the full manifest to begin with.
+- **the gate (#12, dual since 2026-07-04)** — a *faulty* scenario is scored only when
+  (a) baseline accuracy clears a threshold (`cmd/render -gate`, default 0.8) AND
+  (b) the 95% Newcombe CI of Youden's J against its twin excludes 0. Baseline alone
+  passes pure bias — job-secret-wrong-name scored 1.00 baseline with twin NoFault
+  0.00 (J=0) and its "saliency" measured what shakes the reflex, not signal.
+  Excluded scenarios and the reason (baseline / twin / both) land in Table 4.
+- **negative-control floor (2026-07-04)** — server bookkeeping fields
+  (creation/condition timestamps, uid, resourceVersion, generation) cannot encode a
+  fault by construction, so their measured saliency estimates the scenario's
+  removal-induced destabilization (lesson 8) — the blank sample of the assay. A cell
+  is **signal** only if it clears McNemar+BH *and* exceeds the max control saliency
+  of its scenario (the floor); BH-passing cells below the floor render as `destab`.
+  Rationale: Table 3b cannot floor this (healthy bundles have no marginal diagnosis
+  to knock off — their FP is ~0 while faulty-scenario destabilization is huge). At
+  K=40 this cut the signal cells from 24 to 5.
 - **level / class (L1, L2, …)** — a group of field-keys with a saliency threshold,
   discovered from the heatmap in m3. Not decided up front.
 - **group** — a batch key for producing related scenarios together (`make run-<group>`):
@@ -215,7 +249,8 @@ model. This split is mandated — see "measurement contract".
 - **fault class** — a root-cause label the model chooses from. Rule: **one class = one
   distinct root cause an SRE would name**, not one per component (a missing referenced
   object is `Ref_NotFound` whether it's a secret, configmap, pvc, or SA). Classes:
-  `SelectorMismatch`, `Ref_NotFound`, `PortMismatch` (parked — see below), `NoFaultFound`.
+  `SelectorMismatch`, `Ref_NotFound`, `PortMismatch` (un-parked 2026-07-04: at K=40 it
+  is the strongest class — see Current status), `NoFaultFound`.
 
 ## How to run
 
@@ -250,13 +285,16 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
 - **Paper tables today:** `heatmap.gen.tex` (Table 1 saliency map / Table 2a
   fault-deleting control / Table 2b evidence-hiding control / Table 3 healthy
   false-positive rate / Table 3b per-field removal-induced hallucination on healthy
-  bundles, the fragility floor for lesson 8 / Table 4 gated-out scenarios / Table 6
-  localization: among correct-class baselines, did offending\_field point at a
-  deciding locus — right answer for the right reason),
-  `confidence.gen.tex` (the same with 95% CIs and a Signal column), `fdr.gen.tex`
-  (the multiple-comparison decision table: every saliency cell ranked by McNemar p
-  and BH q, with the raw discordant seed counts — the audit trail for every bold
-  cell), `twins.gen.tex` (discrimination: per faulty scenario its baseline accuracy,
+  bundles — near-zero, which is WHY the destabilization floor comes from
+  negative-control fields instead / Table 4 gate-excluded scenarios with the
+  reason (baseline / twin / both) and J / Table 6 localization: among
+  correct-class baselines, did offending\_field point at a deciding locus, plus
+  the top blamed path — measures path-REPORTING, not detection; read with 2a),
+  `confidence.gen.tex` (the same with 95% CIs and a per-cell Verdict column:
+  signal / destab / control / no), `fdr.gen.tex`
+  (the decision table: every saliency cell ranked by McNemar p and BH q, with the
+  raw discordant seed counts, the scenario's fragility floor, and the verdict —
+  the audit trail for every bold cell), `twins.gen.tex` (discrimination: per faulty scenario its baseline accuracy,
   the twin's NoFaultFound rate, and Youden's J with CIs), `baseline.gen.tex` (the
   full unreduced manifests, for the paper to show what the agent sees).
 
@@ -280,11 +318,14 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
    *common* references (envFrom→Secret/ConfigMap, serviceAccountName, imagePullSecrets,
    volume→pvc/secret) and *single-document* selector mismatches
    (Deployment/StatefulSet/DaemonSet/ReplicaSet). It fails — even given an explicit
-   checklist — on cross-document selectors (Service↔pods), port semantics
-   (`targetPort`↔`containerPort`), and uncommon references (HPA/VPA scaleTargetRef,
-   RoleBinding roleRef, priorityClassName, storageClassName). Those scenarios are
-   **correct but gated on 7B**, parked for the multi-model run. Do not "fix" them by
-   over-fitting the prompt — that's the cherry-picking the whole method forbids.
+   checklist — on cross-document selectors (Service↔pods) and uncommon references
+   (HPA/VPA scaleTargetRef, RoleBinding roleRef, priorityClassName,
+   storageClassName). Those scenarios are **correct but gated on 7B**, parked for
+   the multi-model run. Do not "fix" them by over-fitting the prompt — that's the
+   cherry-picking the whole method forbids. (This list originally also claimed port
+   semantics (`targetPort`↔`containerPort`) fail — falsified at K=40: all three
+   PortMismatch scenarios pass with J 0.82–1.00. Smoke-era conclusions don't
+   automatically survive k=40; re-check before citing.)
 
 4. **Scenario-design rule (breaks the experiment if violated): exactly ONE anomalous
    value.** Every sibling reference must resolve and every sibling value must be
@@ -341,6 +382,20 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
    fault to lose; their "saliency" is just removal-induced hallucination. Excluded from
    the map; used for the false-positive rate (Table 3).
 
+10. **K=40 buys power for artifacts too — and baseline-only gating passes bias.**
+    The 2026-07-03 run: 24 cells cleared McNemar+BH, but they concentrated in the
+    three marginal-baseline scenarios and sat mostly on bookkeeping fields
+    (apiVersion, creationTimestamp, status timestamps/counters) with b≫c — a fragile
+    correct diagnosis knocked off by ANY perturbation, exactly lesson 8 at scale.
+    Table 3b cannot floor this (healthy FP ≈ 0: no marginal diagnosis to knock off),
+    hence the negative-control floor (24 → 5 signal cells). Independently,
+    job-secret-wrong-name walked through the old baseline-only gate with a 1.00
+    baseline that its twin exposed as pure bias (J=0) — hence the dual gate. Also:
+    correct class ≠ correct locus. In configmap-ref-wrong-name the model blames the
+    HEALTHY sibling secretRef.name in ~60% of correct baselines (Table 6 top-blamed,
+    localization 0.00) while Table 2a Recognized is 0.93 — it detects the dangling
+    name but misreports the path. Table 6 measures path-reporting, not detection.
+
 ## Conventions & hard constraints
 
 - **Language:** Go 1.26. Keep it minimal — no frameworks, no embellishment, no dead
@@ -371,8 +426,7 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
   destabilization noise (lesson 8). Levels (m3) assume roughly additive saliency; full
   Shapley attribution is exponential and out of scope.
 - **Single fault per instance.** Real incidents can be multi-cause; the POC scopes to one
-  injected fault per instance. `PortMismatch` is defined but parked (7B can't do it
-  cleanly).
+  injected fault per instance.
 - **`validate.go` is structural only.** It checks required-field *presence*, not
   relational invariants. Since 2026-07 `requiredPaths` covers every Kind in the
   catalog (workloads incl. container image, Service, PVC, SC, HPA/VPA, RBAC, PC), so

@@ -103,6 +103,7 @@ func main() {
 	baseSeed := map[string]map[int64]bool{} // scenario → seed → baseline correct (the McNemar pairing)
 	locTotal := map[string]int{}            // faulty-scenario baseline trials with the correct class...
 	locHit := map[string]int{}              // ...of which offending_field pointed at a deciding locus
+	blame := map[string]map[string]int{}    // ...and what they actually blamed (top path shown in Table 6)
 	cells := map[string]cell{}
 	faultClass := map[string]string{}
 	var order []string
@@ -130,9 +131,14 @@ func main() {
 				var d struct {
 					OffendingField string `json:"offending_field"`
 				}
-				if json.Unmarshal([]byte(r.Raw), &d) == nil &&
-					locates(normPath(d.OffendingField), decidingNorms[r.Scenario]) {
-					locHit[r.Scenario]++
+				if json.Unmarshal([]byte(r.Raw), &d) == nil {
+					if locates(normPath(d.OffendingField), decidingNorms[r.Scenario]) {
+						locHit[r.Scenario]++
+					}
+					if blame[r.Scenario] == nil {
+						blame[r.Scenario] = map[string]int{}
+					}
+					blame[r.Scenario][d.OffendingField]++
 				}
 			}
 			continue
@@ -173,26 +179,65 @@ func main() {
 		log.Printf("warning: shards mix %d model digests — saliency across them is not comparable", len(digests))
 	}
 
-	// #12 gate: a faulty scenario whose baseline accuracy is below the threshold is
-	// not scored — saliency (baseline − reduced) is meaningless when the model
-	// cannot diagnose the full manifest. Healthy controls are exempt (judged by FP).
-	gated := map[string]bool{}
-	for s, fc := range faultClass {
-		if fc != dataset.FaultNoFault && frac(baseCorrect[s], baseTotal[s]) < *gate {
-			gated[s] = true
-		}
-	}
-
 	// Pair each faulty scenario with its healthy twin (dataset is the source of
 	// truth): twins are baseline-only NoFault bundles measuring the per-scenario
 	// false-positive rate, so they are kept out of the saliency and control
-	// populations and rendered as the discrimination table instead.
+	// populations and rendered as the discrimination table instead. Paired here,
+	// before the gate, because the twin co-decides it.
 	twinName := map[string]string{}
 	isTwin := map[string]bool{}
 	for _, s := range dataset.All() {
 		if s.TwinOf != "" {
 			twinName[s.TwinOf] = s.Name
 			isTwin[s.Name] = true
+		}
+	}
+
+	// #12 gate, both directions of competence: a faulty scenario is scored only
+	// when the model (a) diagnoses the full manifest — baseline accuracy at or
+	// above the threshold — AND (b) actually discriminates fault from health —
+	// the 95% Newcombe CI of Youden's J against its twin excludes 0. Baseline
+	// alone passes pure bias (lesson 1: a model that always answers this fault
+	// on this bundle shape scores 1.00 yet flags the healthy twin every time),
+	// and saliency measured on bias is "what shakes the reflex", not signal.
+	// Scenarios without twin shards fall back to the baseline rule alone.
+	// Healthy controls are exempt (judged by FP).
+	gated := map[string]string{} // scenario → why it is excluded ("" = scored)
+	for s, fc := range faultClass {
+		if fc == dataset.FaultNoFault {
+			continue
+		}
+		var reasons []string
+		if frac(baseCorrect[s], baseTotal[s]) < *gate {
+			reasons = append(reasons, "baseline")
+		}
+		if t := twinName[s]; baseTotal[t] > 0 {
+			twinFP := baseTotal[t] - baseCorrect[t]
+			if _, jlo, _ := newcombe(baseCorrect[s], baseTotal[s], twinFP, baseTotal[t]); jlo <= 0 {
+				reasons = append(reasons, "twin")
+			}
+		}
+		if len(reasons) > 0 {
+			gated[s] = strings.Join(reasons, "+")
+		}
+	}
+
+	// Negative-control fragility floor, per scored scenario. Server bookkeeping
+	// fields (creation/condition timestamps, uid, resourceVersion, generation)
+	// cannot encode a reference or selector fault by construction, so any
+	// saliency they show is removal-induced destabilization (lesson 8), not
+	// diagnostic signal. The healthy-bundle FP table cannot floor this — with no
+	// marginal diagnosis to knock off, healthy fragility sits at ~0 — so each
+	// scenario's floor is the max saliency over its own control cells, and a
+	// cell counts as signal only if it clears BH AND exceeds that floor.
+	floor := map[string]float64{}
+	for _, key := range order {
+		c := cells[key]
+		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] != "" || !negControl(c.field) {
+			continue
+		}
+		if sal := frac(baseCorrect[c.scenario], baseTotal[c.scenario]) - frac(c.matchFault, c.total); sal > floor[c.scenario] {
+			floor[c.scenario] = sal
 		}
 	}
 
@@ -209,7 +254,7 @@ func main() {
 	var ps []float64
 	for _, key := range order {
 		c := cells[key]
-		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] {
+		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] != "" {
 			continue
 		}
 		b, d := discordant(baseSeed[c.scenario], c.seedFault)
@@ -220,7 +265,26 @@ func main() {
 	for i, q := range bhAdjust(ps) {
 		sigs[sigKeys[i]].q = q
 	}
-	signal := func(key string) bool { s := sigs[key]; return s != nil && s.q <= fdr }
+	// verdict is the per-cell decision: "control" (negative-control field,
+	// ineligible as signal by construction), "signal" (BH q ≤ fdr AND saliency
+	// above the scenario's fragility floor), "destab" (clears BH but not the
+	// floor — statistically real, but indistinguishable from destabilization),
+	// or "no". Only "signal" is bolded.
+	verdict := func(key string) string {
+		c := cells[key]
+		if negControl(c.field) {
+			return "control"
+		}
+		s := sigs[key]
+		if s == nil || s.q > fdr {
+			return "no"
+		}
+		if frac(baseCorrect[c.scenario], baseTotal[c.scenario])-frac(c.matchFault, c.total) > floor[c.scenario] {
+			return "signal"
+		}
+		return "destab"
+	}
+	signal := func(key string) bool { return verdict(key) == "signal" }
 
 	meta := recs[0]
 	var b strings.Builder
@@ -232,15 +296,16 @@ func main() {
 	b.WriteString("% Table 1 — saliency map (non-deciding fields). Saliency = baseline accuracy\n")
 	b.WriteString("% − reduced accuracy, each a fraction over the cell's trials. Bold = signal:\n")
 	fmt.Fprintf(&b, "%% seed-paired exact McNemar, Benjamini–Hochberg q <= %.2f across the %d\n", fdr, len(sigKeys))
-	b.WriteString("% cells of the map; see confidence.gen.tex for CIs, p and q. Valid is a\n")
-	b.WriteString("% covariate, not a gate.\n")
+	b.WriteString("% cells of the map, AND saliency above the scenario's negative-control\n")
+	b.WriteString("% fragility floor (see fdr.gen.tex); see confidence.gen.tex for CIs, p, q\n")
+	b.WriteString("% and per-cell verdicts. Valid is a covariate, not a gate.\n")
 	b.WriteString("\\begin{tabular}{lllcr}\n\\toprule\nScenario & Kind & Field & Valid & Saliency \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
 		// A healthy (NoFault) scenario has no fault to lose, so its "saliency" is
 		// just removal-induced hallucination, not signal — keep it out of the map.
 		// Gated scenarios are excluded too: no diagnostic baseline, no saliency.
-		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] {
+		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] != "" {
 			continue
 		}
 		saliency, _, _ := newcombe(baseCorrect[c.scenario], baseTotal[c.scenario], c.matchFault, c.total)
@@ -262,7 +327,7 @@ func main() {
 	b.WriteString("\\begin{tabular}{lllcr}\n\\toprule\nScenario & Kind & Field & Valid & Recognized \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if !c.deciding || c.hides || gated[c.scenario] {
+		if !c.deciding || c.hides || gated[c.scenario] != "" {
 			continue
 		}
 		recognized := frac(c.matchNoFault, c.total)
@@ -279,7 +344,7 @@ func main() {
 	b.WriteString("\\begin{tabular}{lllcrr}\n\\toprule\nScenario & Kind & Field & Valid & NoFault rate & Fault rate \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if !c.deciding || !c.hides || gated[c.scenario] {
+		if !c.deciding || !c.hides || gated[c.scenario] != "" {
 			continue
 		}
 		fmt.Fprintf(&b, "%s & %s & \\texttt{%s} & %s & %.2f & %.2f \\\\\n",
@@ -334,19 +399,28 @@ func main() {
 		b.WriteString("\\bottomrule\n\\end{tabular}\n")
 	}
 
-	// Below the #12 gate: faulty scenarios the model diagnoses too rarely to score.
-	// Reported for honesty — and as the motivation for the multi-model comparison.
+	// Excluded by the #12 gate: faulty scenarios the model diagnoses too rarely
+	// (baseline) or without discriminating fault from health (twin). Reported
+	// for honesty — and as the motivation for the multi-model comparison.
 	var below []string
 	for s := range gated {
 		below = append(below, s)
 	}
 	sort.Strings(below)
 	if len(below) > 0 {
-		fmt.Fprintf(&b, "\n%% Table 4 — below the #12 baseline gate (acc < %.2f): excluded from the\n", *gate)
-		b.WriteString("% maps above; the model cannot reliably diagnose the full manifest.\n")
-		b.WriteString("\\begin{tabular}{llr}\n\\toprule\nScenario & Fault & Baseline acc \\\\\n\\midrule\n")
+		fmt.Fprintf(&b, "\n%% Table 4 — excluded by the gate. baseline: accuracy on the full manifest\n%% below %.2f. twin: the 95%% Newcombe CI of Youden's J does not exclude 0 —\n", *gate)
+		b.WriteString("% the model answers the same whether or not the fault is present (lesson 1\n")
+		b.WriteString("% bias), so its saliency would measure what shakes the reflex, not signal.\n")
+		b.WriteString("\\begin{tabular}{llrcl}\n\\toprule\nScenario & Fault & Baseline acc & J & Excluded by \\\\\n\\midrule\n")
 		for _, s := range below {
-			fmt.Fprintf(&b, "%s & %s & %.2f \\\\\n", escapeTeX(s), escapeTeX(faultClass[s]), frac(baseCorrect[s], baseTotal[s]))
+			j := "--"
+			if t := twinName[s]; baseTotal[t] > 0 {
+				twinFP := baseTotal[t] - baseCorrect[t]
+				jv, jlo, jhi := newcombe(baseCorrect[s], baseTotal[s], twinFP, baseTotal[t])
+				j = fmt.Sprintf("%.2f [%.2f, %.2f]", jv, jlo, jhi)
+			}
+			fmt.Fprintf(&b, "%s & %s & %.2f & %s & %s \\\\\n",
+				escapeTeX(s), escapeTeX(faultClass[s]), frac(baseCorrect[s], baseTotal[s]), j, escapeTeX(gated[s]))
 		}
 		b.WriteString("\\bottomrule\n\\end{tabular}\n")
 	}
@@ -366,11 +440,23 @@ func main() {
 		b.WriteString("\n% Table 6 — localization: baseline trials with the correct fault_class,\n")
 		b.WriteString("% fraction whose offending_field pointed at a deciding locus (suffix match\n")
 		b.WriteString("% on the last two path segments; document identity is not attributable in a\n")
-		b.WriteString("% free-form path). Low rate = right answer, wrong reason.\n")
-		b.WriteString("\\begin{tabular}{lrrr}\n\\toprule\nScenario & Correct baselines & Localized & Rate \\\\\n\\midrule\n")
+		b.WriteString("% free-form path). This measures the model's ability to REPORT the fault's\n")
+		b.WriteString("% address, not whether detection is anchored on it — Table 2a shows whether\n")
+		b.WriteString("% the diagnosis collapses once the locus is removed. Low rate here + high\n")
+		b.WriteString("% Recognized there = the model detects the anomaly but misreports the path\n")
+		b.WriteString("% (e.g. blames the healthy sibling reference). Top blamed = the most\n")
+		b.WriteString("% frequent offending_field among those trials, with its share.\n")
+		b.WriteString("\\begin{tabular}{lrrrl}\n\\toprule\nScenario & Correct baselines & Localized & Rate & Top blamed \\\\\n\\midrule\n")
 		for _, s := range locNames {
-			fmt.Fprintf(&b, "%s & %d & %d & %.2f \\\\\n",
-				escapeTeX(s), locTotal[s], locHit[s], frac(locHit[s], locTotal[s]))
+			top, n := "", 0
+			for path, count := range blame[s] {
+				if count > n || (count == n && path < top) {
+					top, n = path, count
+				}
+			}
+			fmt.Fprintf(&b, "%s & %d & %d & %.2f & \\texttt{%s} (%.2f) \\\\\n",
+				escapeTeX(s), locTotal[s], locHit[s], frac(locHit[s], locTotal[s]),
+				escapeTeX(top), frac(n, locTotal[s]))
 		}
 		b.WriteString("\\bottomrule\n\\end{tabular}\n")
 	}
@@ -426,23 +512,23 @@ func main() {
 	// reader can separate signal from sampling noise at our small k.
 	var ci strings.Builder
 	ci.WriteString("% Auto-generated by cmd/render — 95% confidence intervals.\n")
-	ci.WriteString("% Saliency shows its Newcombe interval (the effect size); the Signal column\n")
-	ci.WriteString("% is the McNemar+BH decision, whose full evidence lives in fdr.gen.tex.\n")
+	ci.WriteString("% Saliency shows its Newcombe interval (the effect size); the Verdict column\n")
+	ci.WriteString("% is the McNemar+BH+fragility-floor decision — evidence in fdr.gen.tex.\n")
 	ci.WriteString("% Control rates use Wilson (single proportion).\n")
 	ci.WriteString("% \\input-able fragment; requires \\usepackage{booktabs}.\n")
 	fmt.Fprintf(&ci, "%% model: %s @ %s ; k=%d ; temp=%.2f ; num_ctx=%d\n", meta.Model, meta.ModelDigest, meta.K, meta.Temp, meta.NumCtx)
 
-	fmt.Fprintf(&ci, "%% Table A — saliency with 95%% CI (non-deciding fields). Signal = BH q <= %.2f.\n", fdr)
-	ci.WriteString("\\begin{tabular}{lllrcc}\n\\toprule\nScenario & Kind & Field & Saliency & 95\\% CI & Signal \\\\\n\\midrule\n")
+	fmt.Fprintf(&ci, "%% Table A — saliency with 95%% CI (non-deciding fields). Verdict: signal =\n%% BH q <= %.2f AND saliency above the scenario's negative-control fragility\n%% floor; destab = clears BH only; control = a-priori bookkeeping field\n%% (ineligible as signal, defines the floor). Full evidence in fdr.gen.tex.\n", fdr)
+	ci.WriteString("\\begin{tabular}{lllrcc}\n\\toprule\nScenario & Kind & Field & Saliency & 95\\% CI & Verdict \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] {
+		if c.deciding || faultClass[c.scenario] == dataset.FaultNoFault || gated[c.scenario] != "" {
 			continue
 		}
 		sal, low, high := newcombe(baseCorrect[c.scenario], baseTotal[c.scenario], c.matchFault, c.total)
-		field, mark := "\\texttt{"+escapeTeX(c.field)+"}", "no"
-		if signal(key) {
-			field, mark = "\\textbf{"+field+"}", "yes"
+		field, mark := "\\texttt{"+escapeTeX(c.field)+"}", verdict(key)
+		if mark == "signal" {
+			field = "\\textbf{" + field + "}"
 		}
 		fmt.Fprintf(&ci, "%s & %s & %s & %.2f & [%.2f, %.2f] & %s \\\\\n",
 			escapeTeX(c.scenario), escapeTeX(c.kind), field, sal, low, high, mark)
@@ -453,7 +539,7 @@ func main() {
 	ci.WriteString("\\begin{tabular}{lllrc}\n\\toprule\nScenario & Kind & Field & Recognized & 95\\% CI \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if !c.deciding || c.hides || gated[c.scenario] {
+		if !c.deciding || c.hides || gated[c.scenario] != "" {
 			continue
 		}
 		lo, hi := wilson(c.matchNoFault, c.total)
@@ -466,7 +552,7 @@ func main() {
 	ci.WriteString("\\begin{tabular}{lllrcrc}\n\\toprule\nScenario & Kind & Field & NoFault rate & 95\\% CI & Fault rate & 95\\% CI \\\\\n\\midrule\n")
 	for _, key := range order {
 		c := cells[key]
-		if !c.deciding || !c.hides || gated[c.scenario] {
+		if !c.deciding || !c.hides || gated[c.scenario] != "" {
 			continue
 		}
 		nlo, nhi := wilson(c.matchNoFault, c.total)
@@ -514,11 +600,12 @@ func main() {
 	fmt.Printf("wrote %s\n", ciPath)
 
 	// Fourth artifact: the FDR decision table — every saliency cell ranked by
-	// evidence strength, with the raw discordant counts behind each p-value, so
-	// the multiple-comparison decision is fully auditable from one fragment.
+	// evidence strength, with the raw discordant counts behind each p-value and
+	// the fragility floor behind each verdict, so both decisions (multiple
+	// comparison AND destabilization) are fully auditable from one fragment.
 	nSignal := 0
 	for _, key := range sigKeys {
-		if sigs[key].q <= fdr {
+		if verdict(key) == "signal" {
 			nSignal++
 		}
 	}
@@ -532,24 +619,29 @@ func main() {
 	})
 
 	var fd strings.Builder
-	fd.WriteString("% Auto-generated by cmd/render — the multiple-comparison decision table.\n")
+	fd.WriteString("% Auto-generated by cmd/render — the decision table behind every bold cell.\n")
 	fd.WriteString("% Seed-paired exact McNemar per saliency cell; b/c = discordant seeds\n")
 	fd.WriteString("% (baseline-only correct / reduced-only correct); q = Benjamini–Hochberg\n")
-	fd.WriteString("% adjusted p across all cells below. Rows sorted by evidence strength.\n")
+	fd.WriteString("% adjusted p across all cells below. Floor = the scenario's fragility floor:\n")
+	fd.WriteString("% the max saliency over its negative-control cells (server bookkeeping\n")
+	fd.WriteString("% fields, verdict \"control\" — by construction they carry no diagnostic\n")
+	fd.WriteString("% signal, so what they show is removal-induced destabilization, lesson 8).\n")
+	fd.WriteString("% Verdict: signal = q <= FDR and saliency > floor (bold); destab = clears\n")
+	fd.WriteString("% BH but not the floor. Rows sorted by evidence strength.\n")
 	fmt.Fprintf(&fd, "%% m = %d cells tested; FDR level %.2f; signal cells: %d.\n", len(sigKeys), fdr, nSignal)
 	fd.WriteString("% \\input-able fragment; requires \\usepackage{booktabs}.\n")
 	fmt.Fprintf(&fd, "%% model: %s @ %s ; k=%d ; temp=%.2f ; num_ctx=%d\n", meta.Model, meta.ModelDigest, meta.K, meta.Temp, meta.NumCtx)
-	fd.WriteString("\\begin{tabular}{lllrrrrrc}\n\\toprule\nScenario & Kind & Field & Saliency & b & c & p & q & Signal \\\\\n\\midrule\n")
+	fd.WriteString("\\begin{tabular}{lllrrrrrrc}\n\\toprule\nScenario & Kind & Field & Saliency & b & c & p & q & Floor & Verdict \\\\\n\\midrule\n")
 	for _, key := range ranked {
 		c := cells[key]
 		s := sigs[key]
 		sal, _, _ := newcombe(baseCorrect[c.scenario], baseTotal[c.scenario], c.matchFault, c.total)
-		field, mark := "\\texttt{"+escapeTeX(c.field)+"}", "no"
-		if s.q <= fdr {
-			field, mark = "\\textbf{"+field+"}", "yes"
+		field, mark := "\\texttt{"+escapeTeX(c.field)+"}", verdict(key)
+		if mark == "signal" {
+			field = "\\textbf{" + field + "}"
 		}
-		fmt.Fprintf(&fd, "%s & %s & %s & %.2f & %d & %d & %.3f & %.3f & %s \\\\\n",
-			escapeTeX(c.scenario), escapeTeX(c.kind), field, sal, s.b, s.c, s.p, s.q, mark)
+		fmt.Fprintf(&fd, "%s & %s & %s & %.2f & %d & %d & %.3f & %.3f & %.2f & %s \\\\\n",
+			escapeTeX(c.scenario), escapeTeX(c.kind), field, sal, s.b, s.c, s.p, s.q, floor[c.scenario], mark)
 	}
 	fd.WriteString("\\bottomrule\n\\end{tabular}\n")
 
@@ -614,6 +706,17 @@ func main() {
 		log.Fatalf("write %s: %v", twPath, err)
 	}
 	fmt.Printf("wrote %s (%d twin pairs)\n", twPath, len(pairs))
+
+	// Sixth artifact family: the three paper figures (see figures.go) — the
+	// cross-scenario field profile, the TikZ contrast map, and the flagship
+	// manifest painted by verdict. Same populations, same decision rule.
+	fc := &figCtx{
+		cells: cells, order: order, faultClass: faultClass, gated: gated,
+		baseCorrect: baseCorrect, baseTotal: baseTotal, floor: floor, verdict: verdict,
+	}
+	fc.writeFieldProfile(outDir)
+	fc.writeHeatmapFig(outDir)
+	fc.writeManifestFig(outDir)
 }
 
 // decides reports whether the field at (doc, pointer) is an ancestor-or-equal
@@ -677,6 +780,29 @@ func readShards(dir string) []heatmap.Record {
 // side, so a 32b run never overwrites the 7b data.
 func modelDir(model string) string {
 	return strings.NewReplacer(":", "-", "/", "-").Replace(model)
+}
+
+// negControl reports whether a field-key is an a-priori negative control:
+// server-assigned bookkeeping — creation/condition timestamps, uid,
+// resourceVersion, generation. By construction these cannot encode a reference,
+// selector or port fault (the server stamps them regardless of spec content),
+// so they are ineligible as "signal" no matter what the statistics say; the
+// saliency they DO show estimates the scenario's removal-induced
+// destabilization (lesson 8) and defines its fragility floor. This is the
+// blank-sample logic of a lab assay, not field cherry-picking: the exclusion
+// is justified by what the field is (server bookkeeping), never by how it
+// scored.
+func negControl(field string) bool {
+	for _, s := range []string{
+		"/creationTimestamp", "/metadata/generation", "/metadata/resourceVersion",
+		"/metadata/uid", "/lastTransitionTime", "/lastUpdateTime", "/lastProbeTime",
+	} {
+		if strings.HasSuffix(field, s) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // normPath splits a YAML path into lowercase segments, dropping array indices
