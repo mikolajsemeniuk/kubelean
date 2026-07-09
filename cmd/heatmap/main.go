@@ -5,23 +5,38 @@
 // later by cmd/render from these shards, so a methodology change never re-runs
 // the model. Each run overwrites its scenario shards.
 //
-//	go run ./cmd/heatmap -group secret-ref
+// Trials within a baseline/variant are run concurrently through a channel-based
+// worker pool (see runParallel): a fixed number of workers pull seeds off a
+// jobs channel and push finished heatmap.Record values onto a results channel.
+// A single goroutine drains results into the slice, so recs is never touched
+// from more than one goroutine at a time — no mutex required. Order of recs is
+// not guaranteed (and doesn't need to be: every record carries its own Seed,
+// Variant, Doc and Field), but every seed 0..k-1 is represented exactly once.
+//
+//	go run ./cmd/heatmap -group secret-ref -parallel 8
 package main
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/mikolajsemeniuk/kubelean/pkg/dataset"
 	"github.com/mikolajsemeniuk/kubelean/pkg/heatmap"
 	"github.com/mikolajsemeniuk/kubelean/pkg/providers"
+	"github.com/schollz/progressbar/v3"
 )
 
 type diagnosis struct {
@@ -29,11 +44,12 @@ type diagnosis struct {
 }
 
 var (
-	host, model, out      string
-	group                 string
-	k, numCtx, numPredict int
-	temp                  float64
-	baselineOnly          bool
+	host, model, out, backend string
+	group                     string
+	k, numCtx, numPredict     int
+	parallel                  int
+	temp                      float64
+	baselineOnly, force       bool
 )
 
 // buildSchema constrains the model to clean JSON whose fault_class is one of the
@@ -67,16 +83,27 @@ Set fault_class to exactly one of these classes — check each in turn:
 Set offending_field to the YAML path most responsible, or "none".`
 }
 
+type ChatClient interface {
+	Chat(ctx context.Context, in providers.ChatInput) (providers.ChatOutput, error)
+	Digest(ctx context.Context, model string) (string, error)
+}
+
 func main() {
-	flag.StringVar(&host, "host", "http://localhost:11434", "Ollama host")
+	// flag.StringVar(&host, "host", "http://localhost:11434", "Ollama host")
+	// flag.StringVar(&host, "host", "http://192.168.100.121:11434", "Ollama host")
+	flag.StringVar(&host, "host", "http://192.168.100.121:12000", "Ollama host")
 	flag.StringVar(&model, "model", "qwen2.5:7b-instruct", "model name")
 	flag.StringVar(&out, "out", "data", "root output directory for JSONL shards (a per-model subdirectory is appended)")
 	flag.StringVar(&group, "group", "", "scenario group to produce")
 	flag.IntVar(&k, "k", 10, "samples per variant (seed = 0..k-1)")
+	// flag.StringVar(&backend, "backend", "ollama", "inference backend: ollama or vllm")
+	flag.StringVar(&backend, "backend", "vllm", "inference backend: ollama or vllm")
 	flag.Float64Var(&temp, "temp", 0.7, "sampling temperature (>0 so seeds give varied draws)")
 	flag.IntVar(&numCtx, "num-ctx", 8192, "context window — avoids silent truncation of multi-doc prompts")
 	flag.IntVar(&numPredict, "num-predict", 256, "max output tokens")
+	flag.IntVar(&parallel, "parallel", 128, "concurrent in-flight trials per baseline/variant (match to OLLAMA_NUM_PARALLEL / vLLM capacity)")
 	flag.BoolVar(&baselineOnly, "baseline-only", false, "run only the baselines and print accuracy — the cheap #12 smoke before a full run; writes no shard")
+	flag.BoolVar(&force, "force", false, "redo scenarios whose shard file already exists (default: skip them — resume support so a crash mid-run only costs the time since the last completed scenario)")
 	flag.Parse()
 
 	scenarios := dataset.Scenarios(group)
@@ -88,7 +115,15 @@ func main() {
 	prompt := buildPrompt(dataset.FaultLines())
 
 	ctx := context.Background()
-	client := providers.NewOllama(host)
+	var client ChatClient
+	switch backend {
+	case "ollama":
+		client = providers.NewOllama(host)
+	case "vllm":
+		client = providers.NewVLLM(host)
+	default:
+		log.Fatalf("unknown -backend %q (want ollama or vllm)", backend)
+	}
 
 	// Pin the exact weights for the paper: a tag can be re-pulled and change.
 	digest, err := client.Digest(ctx, model)
@@ -105,8 +140,58 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, s := range scenarios {
+	// Precompute targets once per scenario (heatmap.Keys is deterministic on
+	// s.YAML) so we can both size the progress bar up front and reuse the
+	// same slice in the main loop below instead of calling Keys twice.
+	// perScenarioTotal is reused by the resume/-force skip logic below to
+	// fast-forward the bar by the right amount when a shard is skipped.
+	targetsByScenario := make([][]heatmap.Target, len(scenarios))
+	perScenarioTotal := make([]int, len(scenarios))
+	total := 0
+	for i, s := range scenarios {
+		perScenarioTotal[i] = k // baseline trials
+		if baselineOnly {
+			total += perScenarioTotal[i]
+			continue
+		}
+		if s.TwinOf == "" {
+			targets, err := heatmap.Keys(s.YAML)
+			if err != nil {
+				log.Fatalf("%s keys: %v", s.Name, err)
+			}
+			targetsByScenario[i] = targets
+		}
+		perScenarioTotal[i] += len(targetsByScenario[i]) * k
+		total += perScenarioTotal[i]
+	}
+
+	bar := progressbar.NewOptions(total,
+		progressbar.OptionSetDescription("running trials"),
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionSetItsString("item"),
+		progressbar.OptionSetElapsedTime(true),
+		progressbar.OptionShowElapsedTimeOnFinish(),
+		progressbar.OptionThrottle(200*time.Millisecond),
+		// ETA is derived by the library from elapsed time / completed count,
+		// so it settles in as soon as the first few trials land — no need
+		// to compute it ourselves.
+	)
+
+	for i, s := range scenarios {
 		start := time.Now()
+
+		// Resume support: if this scenario's shard was already written by a
+		// prior (crashed) run, skip it instead of redoing potentially tens of
+		// minutes of work. -force disables this and always redoes everything.
+		shardPath := filepath.Join(shardDir, s.Name+".jsonl")
+		if !baselineOnly && !force {
+			if _, statErr := os.Stat(shardPath); statErr == nil {
+				fmt.Printf("%s [%s]: shard already exists, skipping (use -force to redo)\n", s.Name, s.Group)
+				_ = bar.Add(perScenarioTotal[i])
+				continue
+			}
+		}
 
 		in := providers.ChatInput{
 			Model:   model,
@@ -116,14 +201,20 @@ func main() {
 
 		var recs []heatmap.Record
 
-		// baseline: the full bundle, k trials.
+		bar.Describe(fmt.Sprintf("%s [baseline]", s.Name))
+
+		// baseline: the full bundle, k trials, run concurrently.
 		in.Prompt = prompt + "\n\nManifests:\n" + s.YAML
-		baseCorrect := 0
-		answers := map[string]int{}
-		for i := 0; i < k; i++ {
-			r := trial(ctx, client, in, i, s, digest)
+		baseRecs := runParallel(parallel, k, bar, func(seed int) heatmap.Record {
+			r := trial(ctx, client, in, seed, s, digest)
 			r.Variant = "baseline"
 			r.Valid = true
+			return r
+		})
+
+		baseCorrect := 0
+		answers := map[string]int{}
+		for _, r := range baseRecs {
 			if r.Answer != nil && *r.Answer == s.FaultClass {
 				baseCorrect++
 			}
@@ -132,8 +223,8 @@ func main() {
 			} else {
 				answers["<unparseable>"]++
 			}
-			recs = append(recs, r)
 		}
+		recs = append(recs, baseRecs...)
 
 		if baselineOnly {
 			fmt.Printf("%s [%s]: baseline %d/%d correct, answers %v (baseline-only, no shard written)\n",
@@ -143,17 +234,12 @@ func main() {
 
 		// A twin has no fault, hence no saliency to measure: baseline only. Its
 		// k trials are the paired false-positive control for its faulty scenario.
-		var targets []heatmap.Target
-		if s.TwinOf == "" {
-			var err error
-			targets, err = heatmap.Keys(s.YAML)
-			if err != nil {
-				log.Fatalf("%s keys: %v", s.Name, err)
-			}
-		}
+		// targets was already computed in the precompute pass above (empty for
+		// twins), so we just reuse it here instead of calling heatmap.Keys again.
+		targets := targetsByScenario[i]
 
-		fmt.Printf("%s [%s]: baseline %d/%d correct, ablating %d fields × k=%d…\n",
-			s.Name, s.Group, baseCorrect, k, len(targets), k)
+		fmt.Printf("%s [%s]: baseline %d/%d correct, ablating %d fields × k=%d (parallel=%d)…\n",
+			s.Name, s.Group, baseCorrect, k, len(targets), k, parallel)
 
 		invalid := 0
 		for _, t := range targets {
@@ -172,20 +258,24 @@ func main() {
 
 			in.Prompt = prompt + "\n\nManifests:\n" + reduced
 			doc, field := t.Doc, t.Pointer
-			for i := 0; i < k; i++ {
-				r := trial(ctx, client, in, i, s, digest)
+
+			bar.Describe(fmt.Sprintf("%s [%s]", s.Name, field))
+
+			targetRecs := runParallel(parallel, k, bar, func(seed int) heatmap.Record {
+				r := trial(ctx, client, in, seed, s, digest)
 				r.Variant = "reduced"
 				r.Doc = &doc
 				r.Kind = t.Kind
 				r.Field = &field
 				r.Category = string(t.Category)
 				r.Valid = valid
-				recs = append(recs, r)
-			}
+				return r
+			})
+			recs = append(recs, targetRecs...)
 		}
 		fmt.Printf("  %d/%d variants invalid (recorded, flagged in shard)\n", invalid, len(targets))
 
-		path := filepath.Join(shardDir, s.Name+".jsonl")
+		path := shardPath
 		f, err := os.Create(path)
 		if err != nil {
 			log.Fatalf("create %s: %v", path, err)
@@ -204,6 +294,59 @@ func main() {
 		dur := fmt.Sprintf("%dm%02ds", int(d.Minutes()), int(d.Seconds())%60)
 		fmt.Printf("wrote %s (%d trials) in %s\n", path, len(recs), dur)
 	}
+
+	_ = bar.Finish()
+}
+
+// runParallel fans a[0..k) seeds out to `workers` goroutines over a jobs
+// channel and fans the resulting heatmap.Records back in over a results
+// channel. The only goroutine that ever appends to the returned slice is this
+// one (draining results), so no mutex is needed — the channel itself is the
+// synchronization. Every seed 0..k-1 is represented exactly once in the
+// output; the order is not guaranteed to match seed order.
+//
+// bar.Add(1) is called exactly once per drained result, from this same
+// draining goroutine — progressbar/v3 is internally safe for concurrent Add
+// calls anyway, but we don't even need that guarantee here since only one
+// goroutine ever touches it in this function.
+func runParallel(workers, k int, bar *progressbar.ProgressBar, fn func(seed int) heatmap.Record) []heatmap.Record {
+	if workers < 1 {
+		workers = 1
+	}
+	if workers > k {
+		workers = k
+	}
+
+	jobs := make(chan int, k)
+	results := make(chan heatmap.Record, k)
+
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for seed := range jobs {
+				results <- fn(seed)
+			}
+		}()
+	}
+
+	for i := 0; i < k; i++ {
+		jobs <- i
+	}
+	close(jobs)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	recs := make([]heatmap.Record, 0, k)
+	for r := range results {
+		recs = append(recs, r)
+		_ = bar.Add(1)
+	}
+	return recs
 }
 
 // modelDir renders a model name as a directory component (":" and "/" are not
@@ -212,13 +355,149 @@ func modelDir(model string) string {
 	return strings.NewReplacer(":", "-", "/", "-").Replace(model)
 }
 
-// trial runs one model call at the given seed and returns the raw record. Answer
-// is nil when the response does not parse (a stopgap recorded for item #8).
-func trial(ctx context.Context, client *providers.Ollama, in providers.ChatInput, seed int, s dataset.Scenario, digest string) heatmap.Record {
+// --- retry / backoff for transient network failures ---
+//
+// A multi-hour run across thousands of trials will, with near certainty, hit
+// at least one transient network error: a stale pooled connection the server
+// already closed (bare EOF), a brief connection reset, a one-off timeout —
+// or, as observed in practice, the whole host briefly dropping off the LAN
+// (dial fails with "host is down"/"connect: connection refused" instead of a
+// mid-request EOF). Before this fix, ANY error from client.Chat — transient
+// or permanent — went straight to log.Fatalf and killed the entire process.
+//
+// The two transient cases need very different retry budgets. A stale pooled
+// connection is a client-side bookkeeping problem: the fix (dial a fresh
+// connection) takes milliseconds, so a handful of quick retries is enough.
+// A host that's actually gone from the network — thermal shutdown, driver
+// reset, brief reboot — can plausibly take 10-60s to come back; retrying
+// that with the same short budget as a stale connection just burns through
+// all attempts in ~5s and gives up while the host is still down. isDialError
+// distinguishes the two so each gets an appropriately sized budget.
+
+const (
+	// connMaxAttempts/connRetryMaxWait: in-flight connection problems
+	// (EOF, ECONNRESET, EPIPE, timeouts) — fast to recover from.
+	connMaxAttempts   = 6
+	connRetryBaseWait = 500 * time.Millisecond
+	connRetryMaxWait  = 30 * time.Second
+
+	// dialMaxAttempts/dialRetryMaxWait: the TCP dial itself failed (host
+	// unreachable/down/refused) — give the host real time to come back.
+	dialMaxAttempts   = 14
+	dialRetryBaseWait = 1 * time.Second
+	dialRetryMaxWait  = 20 * time.Second
+	// Total worst-case wall clock across all dial attempts at these settings
+	// is on the order of a few minutes, which is the point: we'd rather a
+	// single trial block for a few minutes than kill a multi-hour run over
+	// what turned out to be a 20-second network blip.
+)
+
+// isDialError reports whether err is a failure to establish the TCP
+// connection at all (net.OpError with Op == "dial"), as opposed to a failure
+// that happened after a connection existed (EOF, reset, timeout mid-request).
+// This is the "host is down" / "connection refused" / "no route to host"
+// case — categorically different from a stale pooled connection.
+func isDialError(err error) bool {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return opErr.Op == "dial"
+	}
+	return false
+}
+
+// isRetryable reports whether err looks like a transient network failure
+// worth retrying at all, as opposed to a permanent/logical failure (bad
+// request, malformed response) that will just fail the same way again.
+func isRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
+	if isDialError(err) {
+		return true
+	}
+	// The failure that originally killed the networking run: server
+	// (uvicorn — vLLM's default keep-alive is 5s and isn't configurable via
+	// any `vllm serve` flag) closed a pooled connection out from under us;
+	// Go's transport only discovers this as a bare EOF when it tries to
+	// reuse it.
+	if errors.Is(err, io.EOF) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	return false
+}
+
+// retryBudget picks the (maxAttempts, baseWait, maxWait) budget appropriate
+// to the failure just observed: dial errors get the long budget, everything
+// else gets the short one.
+func retryBudget(err error) (maxAttempts int, baseWait, maxWait time.Duration) {
+	if isDialError(err) {
+		return dialMaxAttempts, dialRetryBaseWait, dialRetryMaxWait
+	}
+	return connMaxAttempts, connRetryBaseWait, connRetryMaxWait
+}
+
+// retryDelay returns an exponential backoff with full jitter, capped at
+// maxWait, so many goroutines that all just hit the same transient failure
+// (e.g. the whole host dropping off the LAN) don't all retry in lockstep and
+// hammer it the instant it comes back.
+func retryDelay(attempt int, baseWait, maxWait time.Duration) time.Duration {
+	backoff := baseWait * time.Duration(1<<uint(attempt))
+	if backoff > maxWait {
+		backoff = maxWait
+	}
+	return time.Duration(rand.Int63n(int64(backoff)))
+}
+
+// trial runs one model call at the given seed and returns the raw record.
+// Transient network errors are retried with exponential backoff (see
+// isRetryable/retryDelay above); anything else — or exhausting maxAttempts —
+// still fails the whole run via log.Fatalf, same as before this change.
+// Answer is nil when the response does not parse (a stopgap recorded for
+// item #8).
+// in is received by value, so mutating in.Options.Seed here only touches this
+// call's own copy — safe to call concurrently from multiple goroutines sharing
+// the same outer `in`.
+func trial(ctx context.Context, client ChatClient, in providers.ChatInput, seed int, s dataset.Scenario, digest string) heatmap.Record {
 	in.Options.Seed = int64(seed)
-	res, err := client.Chat(ctx, in)
-	if err != nil {
-		log.Fatalf("%s chat (seed %d): %v", s.Name, seed, err)
+
+	var res providers.ChatOutput
+	var err error
+	for attempt := 0; ; attempt++ {
+		res, err = client.Chat(ctx, in)
+		if err == nil {
+			break
+		}
+		if !isRetryable(err) {
+			log.Fatalf("%s chat (seed %d): %v", s.Name, seed, err)
+		}
+
+		maxAttempts, baseWait, maxWait := retryBudget(err)
+		if attempt >= maxAttempts-1 {
+			log.Fatalf("%s chat (seed %d): giving up after %d attempts: %v", s.Name, seed, attempt+1, err)
+		}
+
+		wait := retryDelay(attempt, baseWait, maxWait)
+		kind := "conn"
+		if isDialError(err) {
+			kind = "dial"
+		}
+		log.Printf("warning: %s chat (seed %d) attempt %d/%d [%s] failed (%v), retrying in %s",
+			s.Name, seed, attempt+1, maxAttempts, kind, err, wait)
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			log.Fatalf("%s chat (seed %d): context done while waiting to retry: %v", s.Name, seed, ctx.Err())
+		}
 	}
 
 	r := heatmap.Record{

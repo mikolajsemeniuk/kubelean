@@ -9,17 +9,51 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"time"
 )
 
 // Ollama talks to a local Ollama server at Host (e.g. http://localhost:11434).
+//
+// httpClient is intentionally NOT http.DefaultClient. The default transport's
+// MaxIdleConnsPerHost is 2 — fine for occasional requests, but under real
+// concurrency (many goroutines hitting the same Host at once, as cmd/heatmap's
+// runParallel does) it forces the transport to keep opening and tearing down
+// TCP connections instead of reusing a pool of them. That overhead scales
+// *worse* than linearly as concurrency rises, which is why raising -parallel
+// past a point can make throughput fall below a lower-parallelism baseline
+// instead of merely plateauing: past a certain concurrency the connection
+// churn cost outweighs whatever extra scheduling slack the server still had.
+// MaxIdleConnsPerHost here is set generously above any -parallel value we'd
+// realistically try, so the pool itself is never the bottleneck.
 type Ollama struct {
-	Host string
+	Host       string
+	httpClient *http.Client
 }
 
-// NewOllama returns a client for the given host.
+// NewOllama returns a client for the given host, with a transport whose
+// connection pool is sized for real concurrency instead of the http.Default*
+// pool, which is sized for casual, low-concurrency use.
 func NewOllama(host string) *Ollama {
-	return &Ollama{Host: host}
+	transport := &http.Transport{
+		MaxIdleConns:        16,
+		MaxIdleConnsPerHost: 16,
+		IdleConnTimeout:     90 * time.Second,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+	}
+	return &Ollama{
+		Host: host,
+		httpClient: &http.Client{
+			Transport: transport,
+			// No blanket client-side Timeout: a slow model response would
+			// otherwise be indistinguishable from a genuinely hung request.
+			// Callers already carry their own ctx for cancellation.
+		},
+	}
 }
 
 // ChatInput is a single /api/generate request. Set Stream false to get one
@@ -57,16 +91,14 @@ func (o *Ollama) Digest(ctx context.Context, model string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ollama: build tags request: %w", err)
 	}
-
-	res, err := http.DefaultClient.Do(req)
+	res, err := o.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("ollama: tags http: %w", err)
 	}
-	defer res.Body.Close()
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		raw, _ := io.ReadAll(res.Body)
-		return "", fmt.Errorf("ollama: tags status %d: %s", res.StatusCode, string(raw))
+		return "", fmt.Errorf("ollama: tags status %d", res.StatusCode)
 	}
 
 	var out struct {
@@ -79,13 +111,11 @@ func (o *Ollama) Digest(ctx context.Context, model string) (string, error) {
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		return "", fmt.Errorf("ollama: decode tags: %w", err)
 	}
-
 	for _, m := range out.Models {
 		if m.Name == model || m.Model == model {
 			return m.Digest, nil
 		}
 	}
-
 	return "", fmt.Errorf("ollama: model %q not found in tags", model)
 }
 
@@ -95,28 +125,23 @@ func (o *Ollama) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: marshal request: %w", err)
 	}
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.Host+"/api/generate", bytes.NewReader(input))
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-
-	res, err := http.DefaultClient.Do(req)
+	res, err := o.httpClient.Do(req)
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: http: %w", err)
 	}
-
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(res.Body)
 		return ChatOutput{}, fmt.Errorf("ollama: status %d: %s", res.StatusCode, string(raw))
 	}
-
 	var out ChatOutput
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: decode response: %w", err)
 	}
-
 	return out, nil
 }

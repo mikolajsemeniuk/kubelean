@@ -6,8 +6,8 @@ K ?= 40
 
 # The RCA model under test. Shards land in data/<model>/ and artifacts in
 # paper/<model>/, so runs for different models never overwrite each other:
-#   make run-all MODEL=qwen2.5:32b-instruct && make render MODEL=qwen2.5:32b-instruct
-MODEL ?= qwen2.5:7b-instruct
+#   make run-all MODEL=qwen2.5:32b-instruct && make render MODEL=ministral-3:8b
+MODEL ?= ministral-3:8b
 
 # The cheap #12 gate check: baselines only, low k, no shards written. Run it
 # after any generator/prompt change, before committing to a full run.
