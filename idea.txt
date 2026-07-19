@@ -44,3 +44,270 @@ Pomysł 2 (ekosystem rules/skills/agents na modelach 32B) — to jest najmocniej
   Jedno ostrzeżenie: pisz w terminologii vendor-neutralnej (procedural knowledge injection, hierarchical
   delegation, context compaction), nie „Claude skills" — inaczej praca wygląda jak studium jednego
   produktu.
+
+Zrobione — pobrałem i zmierzyłem 19 produkcyjnych system promptów (oficjalne prompty Anthropica, leaki
+  ChatGPT/Gemini/Grok, harnessy agentowe: Claude Code, Codex, Gemini CLI, Cursor, Devin, Manus, Warp,
+  Cline, Docker Gordon, oraz prompty vendorów tanich modeli: DeepSeek, Qwen, Kimi). Pliki leżą w
+  scratchpadzie (prompts/). Oto co z tego wynika.
+
+  1. Rozmiary — i najważniejsze odkrycie
+
+  ┌────────────────────────────────────────────────┬──────────────────┬─────────────────┬─────────┐
+  │                     Prompt                     │       Typ        │      Znaki      │ ~Tokeny │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Claude Code (Fable 5)                          │ harness agentowy │         140 769 │ ~35 000 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ ChatGPT 5.5 Thinking                           │ czat + toole     │         116 100 │ ~29 000 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Cline (open source)                            │ harness agentowy │          47 083 │ ~11 800 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Docker Gordon                                  │ agent DevOps     │          41 505 │ ~10 400 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Kimi 3                                         │ czat agentowy    │          36 008 │  ~9 000 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Devin                                          │ harness agentowy │          34 714 │  ~8 700 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Gemini CLI                                     │ harness agentowy │          28 868 │  ~7 200 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ claude.ai (Opus 4.8 / Fable 5, oficjalne)      │ czat             │ 22 800 / 22 118 │  ~5 600 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Cursor / Grok 4.2 / Codex GPT-5.6 / Gemini 3.5 │ różne            │      16–18 tys. │  ~4 200 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Warp / VSCode Copilot / Manus                  │ harness agentowy │      10–14 tys. │  ~3 000 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ Qwen 3.6 Plus                                  │ czat             │           6 703 │  ~1 700 │
+  ├────────────────────────────────────────────────┼──────────────────┼─────────────────┼─────────┤
+  │ DeepSeek chat                                  │ czat             │             438 │    ~110 │
+  └────────────────────────────────────────────────┴──────────────────┴─────────────────┴─────────┘
+
+  Trzy twarde obserwacje:
+
+  (a) Rdzeń behawioralny jest zbieżny do wąskiego pasma 10–22 tys. znaków (~2,5–5,5 tys. tokenów) —
+  resztę zjadają opisy narzędzi. Rozbiłem dwa największe: Claude Code to 22 tys. rdzenia + 119 tys.
+  opisów tooli (84%); ChatGPT 5.5 Thinking to 10 tys. rdzenia + 106 tys. tooli (91%). To bezpośrednio
+  wspiera tezę z naszej rozmowy o komponentach: frontier wkłada większość budżetu promptu w kontrakty
+  narzędzi, nie w instrukcje zachowania — więc komponent T (projekt tooli) zasługuje w twojej ablacji na
+  co najmniej taką samą wagę jak system prompt.
+
+  (b) „Harness gap" u tanich vendorów jest widoczny gołym okiem. DeepSeek wysyła model do usera z 438
+  znakami, Qwen z 6,7 tys. — podczas gdy produkty frontierowe budują dziesiątki tysięcy znaków
+  inżynierii wokół modelu o podobnej klasie trudności zadań. To jest empiryczna motywacja całej twojej
+  serii: różnica w doświadczeniu „model 32B nie umie zdiagnozować prostej rzeczy" vs „Claude/GPT umie"
+  to w niemałej części różnica harnessu, nie tylko wag.
+
+  (c) Prompty harnessów nie są statyczne — są składane w runtime. Claude Code ma sekcje dynamiczne (git
+  status, katalog projektu, lista skilli, pamięć), Gemini CLI dokleja „Added Memories", Devin ma tryby.
+  Frontier już robi routing kontekstu — tylko nikt tego nie zmierzył. To jest dokładnie luka na twój
+  papier 2.
+
+  2. Taksonomia elementów (co się powtarza w niemal każdym harnessie)
+
+  1. Tożsamość i rola (wszystkie — 1–3 zdania, krótkie).
+  2. Wstrzyknięty kontekst środowiska — cwd, OS, data, stan gita (Claude Code, Devin, Warp). Odpowiednik
+  u nas: migawka klastra.
+  3. Kontrakt komunikacji — format odpowiedzi, limity długości (Gordon ma dosłownie rozmiary S/M/L w
+  znakach!), zakazane frazy.
+  4. Dyscyplina tool-calli — kiedy który tool, równoległość, plan przed pierwszym wywołaniem (Gordon
+  wymusza numerowany plan lustrzany do prośby usera).
+  5. Runbooki per typ zadania — Gemini CLI „Primary Workflows", Warp „Simple/Complex tasks", Gordon
+  „DEBUGGING".
+  6. Bezpieczeństwo / akcje destrukcyjne — Gemini CLI „Security & System Integrity", reguły gitowe
+  Claude Code, sekrety w Warp.
+  7. Autonomia i wytrwałość — „nie pytaj, działaj; wracaj po błędach" (Codex, Claude Code).
+  8. Ekonomia kontekstu — Gemini CLI ma całą sekcję „Context Efficiency" z regułami „grep zamiast
+  czytania plików, wąskie zakresy, łącz odczyty równolegle" — czyli frontier instruuje model, jak
+  oszczędzać własny kontekst. To jest twoje reduce() w formie behawioralnej zamiast mechanicznej —
+  piękny punkt odniesienia do papieru.
+  9. Weryfikacja przed zakończeniem — „rebuild and verify" (Gordon), „tests must pass" (Codex).
+  10. Pamięć (Claude Code, Gordon, Gemini CLI).
+  11. Kiedy eskalować do usera (Devin „When to Communicate with User").
+
+  Styl: harnessy = modularne nagłówki markdown (bo sekcje są składane warunkowo); czaty (oficjalny
+  claude.ai) = proza akapitowa. Dla nas: modułowo, bo router będzie podmieniał sekcje.
+
+  3. Perła: sekcja DEBUGGING Docker Gordona
+
+  Gordon (produkcyjny agent Dockera — domenowo najbliższy nam) ma obowiązkowy runbook zbierania dowodów:
+  „ALWAYS run docker logs — MANDATORY... Even if you think you already know the issue... NO
+  EXCEPTIONS", plus mapowania symptom→komenda („exit 137 → inspect + stats → OOM", „port issues → ps
+  PORTS → inspect PortBindings"). Zwróć uwagę na dwie rzeczy: to jest dokładnie routing po dowodach +
+  inwarianty L2/L3 z naszej rozmowy, istniejący już w produkcie; a agresywność sformułowań („NO
+  EXCEPTIONS", wielokrotne powtórzenia) to pośredni dowód, że modele bez wymuszenia pomijają zbieranie
+  dowodów i zgadują — czyli dokładnie ta awaria, którą obserwujesz u modeli 32B. Vendor nauczył się tego
+  na produkcji; ty to zmierzysz kontrolowanie.
+
+  4. Blueprint naszego promptu K8s (na podstawie tych danych)
+
+  Statyczny rdzeń ~8–9 tys. znaków (~2 tys. tokenów — dolna granica pasma empirycznego, słuszna dla
+  małych modeli, bo Kimi/Qwen pokazują, że tani vendor nie przewiduje długiego promptu, a za duży prompt
+  sam rozprasza — to zmierzy twój warunek R1):
+
+  Sekcja: Tożsamość + środowisko
+  Drabina: —
+  ~Znaki: 800
+  Treść (wzorzec źródłowy): rola SRE-agenta + wstrzyknięta migawka klastra (wzór: Claude Code gitStatus)
+  ────────────────────────────────────────
+  Sekcja: Metoda diagnozy
+  Drabina: L1
+  ~Znaki: 1 500
+  Treść (wzorzec źródłowy): dowody przed wnioskiem, jedna hipoteza naraz, weryfikacja po naprawie
+  (Gordon)
+  ────────────────────────────────────────
+  Sekcja: Inwarianty K8s
+  Drabina: L2
+  ~Znaki: 2 500
+  Treść (wzorzec źródłowy): referencje muszą się rozwiązywać; selector⊆labels; łańcuch portów
+  port→targetPort→containerPort; requests≤limits; mapowania reason→check (CrashLoopBackOff→logs
+  --previous, OOMKilled→limits, ImagePullBackOff→image+pullSecrets, Pending→events FailedScheduling)
+  ────────────────────────────────────────
+  Sekcja: Dyscyplina tooli + ekonomia kontekstu
+  Drabina: —
+  ~Znaki: 2 000
+  Treść (wzorzec źródłowy): describe→events→logs w tej kolejności; zakaz -o yaml całych obiektów,
+  jsonpath/wybrane pola (Gemini CLI „Context Efficiency" — a które pola, mówi twoja mapa saliency z
+  kubelean)
+  ────────────────────────────────────────
+  Sekcja: Bramka mutacji
+  Drabina: —
+  ~Znaki: 1 000
+  Treść (wzorzec źródłowy): odczyty swobodnie; apply/delete/scale tylko po diagnozie z dowodem; nic
+  nieodwracalnego bez potwierdzenia (Gemini CLI Security)
+  ────────────────────────────────────────
+  Sekcja: Kontrakt wyjścia
+  Drabina: —
+  ~Znaki: 800
+  Treść (wzorzec źródłowy): diagnoza = klasa + locus + dowód + fix; limit długości (Gordon S/M/L)
+  ────────────────────────────────────────
+  Sekcja: Slot routera
+  Drabina: L3
+  ~Znaki: 1–2 tys.
+  Treść (wzorzec źródłowy): dynamicznie wstrzykiwany runbook wybrany przez triage — pusty w R0,
+  wszystkie
+  w R1, po query w R2, po dowodach w R3, oracle w R4
+
+  Każdy wiersz tej tabeli to jednocześnie komórka ablacji — sekcje są wymienne, więc drabina L0–L4 i
+  polityki R0–R4 z poprzedniej rozmowy realizują się jako konfiguracja składania promptu, dokładnie tak,
+  jak robi to Claude Code.
+
+  5. Co to daje artykułowi
+
+  Ta analiza to gotowy podrozdział „design space grounded in production systems": zamiast wymyślać
+  komponenty harnessu z głowy, pokazujesz, że każdy z nich ma zaobserwowaną instancję w N=19
+  produkcyjnych promptach, z rozmiarami. Jedno zastrzeżenie metodologiczne: leaki są nieweryfikowalne
+  formalnie — w papierze opieraj liczby na źródłach oficjalnych (Anthropic publikuje prompty claude.ai w
+  docs; repo Piebald-AI wersjonuje prompt Claude Code per release), a leaki traktuj jako materiał
+  pomocniczy.
+
+  Zapisałem cały pivot serii + te liczby do pamięci projektu, więc nie zginie między sesjami. Naturalny
+  następny krok: napiszę pełny prompt v0 (te ~9 tys. znaków, po angielsku, w plikach sekcyjnych gotowych
+  pod składanie/ablację) — powiedz „działamy", to siadam.
+
+  Sources:
+  - asgeirtj/system_prompts_leaks (https://github.com/asgeirtj/system_prompts_leaks)
+  - x1xhlol/system-prompts-and-models-of-ai-tools
+  (https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools)
+  - Oficjalne system prompty Anthropica
+  (https://platform.claude.com/docs/en/release-notes/system-prompts)
+  - Piebald-AI/claude-code-system-prompts (https://github.com/Piebald-AI/claude-code-system-prompts)
+
+no dobra czyli jakbys do tego podszedl bo ja widze tak, moze mozna by bylo zebrac wszystkie te
+  findigi dac obliczyc odleglosc cosinusa albo jakis model embeddingowy cos takiego i na podstawie tego
+  obliczyc jakies kilka obszarow tak zeby wyszlo nam matematycznie jakiego system prompta potrzebuje
+  model, nastepnie z tymi obszarami zrobic rozne ablacje wywalajac niektore rzeczy, mierzac na roznych
+  modelach etc, co o tym sadzisz ale tak szczerze?
+
+⏺ Szczerze? Tym razem embeddingi trafiły w 70% we właściwe miejsce — po raz pierwszy w tej rozmowie
+  proponujesz ich użycie tam, gdzie się bronią. Ale w pomyśle jest jeden błąd kategorialny, który trzeba
+  wyciąć, bo inaczej recenzent rozbierze cię na pierwszej stronie. Rozłóżmy to uczciwie.
+
+  Co jest dobre
+
+  Klastrowanie fragmentów produkcyjnych promptów embeddingami, żeby wyprowadzić obszary z danych zamiast
+  z mojej/twojej głowy — to jest metodologicznie zdrowe i ma nazwę: indukcyjna analiza treści
+  wspomagana obliczeniowo. I zauważ, że to jest dokładnie twoja własna reguła z kubelean: „nigdy nie
+  uzasadniaj jednostki analizy intuicją — wyprowadź ją bottom-up z pomiaru". Taksonomia komponentów
+  promptu przestaje być „Claude wymyślił 7 sekcji" (arbitralne, atakowalne), a staje się „K obszarów
+  wyłonionych z korpusu N produkcyjnych promptów, zwalidowanych przez niezależnych anotatorów". To jest
+  lepsza wersja tego, co zrobiłem wczoraj ręcznie.
+
+  Gdzie jest błąd kategorialny
+
+  Fraza „żeby wyszło nam matematycznie, jakiego system prompta potrzebuje model" — tego embeddingi nie
+  potrafią i nigdy nie będą potrafić. Geometria tekstu mówi, z czego składają się prompty
+  (deskryptywnie). Nie mówi, co działa na model (kauzalnie). Dwa klastry mogą być semantycznie odległe i
+  funkcjonalnie identyczne — albo odwrotnie. „Czego model potrzebuje" definiuje wyłącznie delta wyniku
+  na benchmarku. Więc podział ról musi być żelazny:
+
+  - embeddingi → wyprowadzają JEDNOSTKI ablacji (obszary — co w ogóle testować),
+  - benchmark → mierzy POTRZEBĘ (wkład marginalny każdego obszaru, per model).
+
+  „Matematyczny opis tego, czego model potrzebuje" na końcu istnieje — ale jest nim wektor zmierzonych
+  wkładów marginalnych obszarów, nie odległość kosinusowa. Cosine buduje oś eksperymentu; nigdy nie jest
+  wynikiem.
+
+  Pipeline po korekcie
+
+  1. Korpus: rozszerz z 19 do ~40–50 promptów (repa mają wersje historyczne). Uwaga na rodowód: vendorzy
+  kopiują od siebie, Claude Code i Codex dzielą konwencje — bez deduplikacji i stratyfikacji per vendor
+  klastry odzwierciedlą pokrewieństwo, nie funkcję.
+  2. Chunking regułowy (po nagłówkach/akapitach), zamrożony przed analizą — to jest największy
+  „researcher degree of freedom" tego kroku i recenzent o niego spyta.
+  3. Klastrowanie z obroną: ≥2 różne modele embeddingowe, analiza stabilności (bootstrap, ARI między
+  przebiegami), potem walidacja ludzka: dwóch anotatorów etykietuje próbkę fragmentów, liczysz zgodność
+  (kappa Cohena) z klastrami. Wynik: taksonomia K obszarów + statystyki występowania (w ilu % promptów,
+  jaki medianowy rozmiar). To już samo w sobie jest publikowalnym wkładem opisowym — systematycznego
+
+  - embeddingi → wyprowadzają JEDNOSTKI ablacji (obszary — co w ogóle testować),
+  - benchmark → mierzy POTRZEBĘ (wkład marginalny każdego obszaru, per model).
+
+  „Matematyczny opis tego, czego model potrzebuje" na końcu istnieje — ale jest nim wektor zmierzonych
+  wkładów marginalnych obszarów, nie odległość kosinusowa. Cosine buduje oś eksperymentu; nigdy nie jest
+  wynikiem.
+
+  Pipeline po korekcie
+
+  1. Korpus: rozszerz z 19 do ~40–50 promptów (repa mają wersje historyczne). Uwaga na rodowód: vendorzy
+  kopiują od siebie, Claude Code i Codex dzielą konwencje — bez deduplikacji i stratyfikacji per vendor
+  klastry odzwierciedlą pokrewieństwo, nie funkcję.
+  2. Chunking regułowy (po nagłówkach/akapitach), zamrożony przed analizą — to jest największy „researcher
+  degree of freedom" tego kroku i recenzent o niego spyta.
+  3. Klastrowanie z obroną: ≥2 różne modele embeddingowe, analiza stabilności (bootstrap, ARI między
+  przebiegami), potem walidacja ludzka: dwóch anotatorów etykietuje próbkę fragmentów, liczysz zgodność
+  (kappa Cohena) z klastrami. Wynik: taksonomia K obszarów + statystyki występowania (w ilu % promptów, jaki
+  medianowy rozmiar). To już samo w sobie jest publikowalnym wkładem opisowym — systematycznego studium
+  korpusu produkcyjnych system promptów z wyprowadzoną taksonomią o ile wiem nikt nie zrobił (do
+  potwierdzenia w przeglądzie literatury).
+  4. Instancjacja dla K8s: dla każdego obszaru piszesz treść domenową w N≥3 parafrazach (poziom 2 piramidy z
+  wczoraj) — tu wraca człowiek i dlatego parafrazy są obowiązkowe: mierzysz obszar, nie string.
+  5. Ablacje: obszary × modele × zadania, leave-one-out + add-one-in, statystyka którą masz. Headline'owy
+  wynik to interakcja obszar×rozmiar modelu: hipoteza, że 7B potrzebuje wymuszania dowodów i dyscypliny
+  tooli, 32B mniej, frontier prawie wcale — profil „czego potrzebuje model" jako funkcja skali. Tego nikt
+  nie policzył porządnie.
+  6. Walidacja: z profilu składasz „minimalny wystarczający prompt" per model i testujesz go na held-out
+  przeciw pełnemu promptowi i mocnym baseline'om.
+
+  Zobacz teraz na kształt tego pipeline'u: korpus → wyprowadź jednostki → zmierz saliency per jednostka →
+  wyprowadź poziomy → zwaliduj. To jest dokładnie kubelean (m1→m2→m3→m4), tylko podłożem są komponenty
+  promptu zamiast pól YAML-a. To ma poważną konsekwencję dla doktoratu: twoim meta-wkładem staje się jedna
+  metodologia — ablacyjny pomiar saliency na ustrukturyzowanych jednostkach kontekstu — zastosowana do dwóch
+  podłoży (pola manifestów; komponenty harnessu), z benchmarkiem jako wspólnym instrumentem. Trzy artykuły
+  przestają być luźną serią, a stają się jednym argumentem. Obrona takiej spójności przed komisją to
+  zupełnie inna liga niż „trzy tematy o AI i K8s".
+
+  Ryzyka, żebyś nie był zaskoczony
+
+  - Klastry ≠ przyczyny — powtórzę, bo to będzie pierwsza linia ataku: taksonomia jest deskryptywna, każde
+  zdanie kauzalne w papierze musi wskazywać na komórkę ablacji, nie na klaster.
+  - Kombinatoryka: przy K≈8–10 obszarach pełna siatka 2^K × modele × parafrazy jest za droga —
+  leave-one-out/add-one-in z raportowaniem rozjazdów jako interakcji (omawialiśmy) albo frakcyjny plan
+  czynnikowy.
+  - Mapowanie klaster→treść K8s reintrodukuje osąd ludzki — jawny trace (fragmenty korpusu → obszar →
+  napisana treść) w materiałach dodatkowych plus parafrazy to obrona.
+  - Prior art do sprawdzenia: katalogi wzorców promptów (White et al.), prace o automatycznej
+  dekompozycji/optymalizacji promptów (DSPy/GEPA), ewentualne analizy leaków. Nadal wisi nam pełny przegląd
+  literatury.
+
+  Werdykt: bierzemy twój pomysł z jedną zamianą — cosine z „sędziego" przesuwa się na „projektanta osi
+  eksperymentu". Konkretny następny krok, który mogę zrobić od ręki: prototyp kroków 1–3 na korpusie, który
+  już leży w scratchpadzie (rozszerzenie do ~40 promptów, chunking, klastrowanie, stabilność) — zobaczysz
+  realną taksonomię z danych zamiast dyskusji o niej. Powiedz „działamy", to robię.
