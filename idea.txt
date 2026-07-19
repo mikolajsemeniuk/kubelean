@@ -1,0 +1,11 @@
+Pomysł 2 (ekosystem rules/skills/agents na modelach 32B) — to jest najmocniejszy pomysł i powinien być
+  rdzeniem doktoratu. Ale sformułuj go jako pytanie mierzalne: ile luki między modelem 32B a frontier
+  na zadaniach operacyjnych K8s zamyka każdy komponent harnessu, i jakim kosztem? Czyli ablacja
+  komponentów: {system prompt / reguły proceduralne (skills) / dekompozycja na subagentów / projekt
+  tooli MCP / zarządzanie kontekstem / pamięć} × {tier modelu}. Wynikiem jest krzywa Pareto
+  trafność-koszt i atrybucja per-komponent. Zauważ: to jest dokładnie DNA kubelean — ablacja i mierzenie
+  marginal signal — tylko jednostką ablacji jest komponent harnessu zamiast pola YAML. Twoja maszyneria
+  statystyczna (paired McNemar, BH-FDR, Wilson/Newcombe, twins, gate'y) przenosi się jeden do jednego.
+  Jedno ostrzeżenie: pisz w terminologii vendor-neutralnej (procedural knowledge injection, hierarchical
+  delegation, context compaction), nie „Claude skills" — inaczej praca wygląda jak studium jednego
+  produktu.
