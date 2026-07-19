@@ -18,6 +18,7 @@ type DeploymentParams struct {
 	App                string // metadata.labels.app
 	Replicas           int
 	SelectorApp        string // spec.selector.matchLabels.app
+	SelectorExprValue  string // optional: renders the selector as matchExpressions (key app, operator In, this single value) instead of matchLabels ("" keeps matchLabels, the pre-existing behavior)
 	PodApp             string // spec.template.metadata.labels.app
 	ContainerName      string
 	Image              string

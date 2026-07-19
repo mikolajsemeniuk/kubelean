@@ -47,10 +47,27 @@ levels) is not yet.
 - **`reduce()` — NOT STARTED.** It will wrap the same field-remover kernel and load
   m3's level→field-keys config. The kernel (`heatmap.Remove`) already exists.
 
-Catalog right now: **33 faulty scenarios (22 Ref\_NotFound / 7 SelectorMismatch /
-4 PortMismatch) + 33 healthy twins + 3 healthy controls = 69 entries, ~2000
+Catalog right now: **37 faulty scenarios (24 Ref\_NotFound / 8 SelectorMismatch /
+5 PortMismatch) + 37 healthy twins + 3 healthy controls = 77 entries, ~2200
 variants; 7 run-groups, 31 Kinds** (21 Kinds appear in scenarios — incl. Job,
-Ingress, NetworkPolicy, PDB since 2026-07). Class-balance rules that produced
+Ingress, NetworkPolicy, PDB since 2026-07). The four 2026-07-09 additions
+(statefulset-servicename-wrong-name, selector-matchexpressions-mismatch,
+networkpolicy-port-mismatch, rolebinding-subject-wrong-namespace — smoked
+2026-07-09 on local Ollama, baselines only: netpol-port and
+rolebinding-ns pass on BOTH qwen-7b (3/3) and gemma4 (2/2), twins clean;
+matchexpressions passes gemma only (2/2; qwen 0/3 NoFault — the
+expression form is outside 7B pattern competence, lesson 3);
+statefulset-servicename fails BOTH (0/3, 0/2, all NoFault — nobody
+resolves spec.serviceName yet; honest coverage, expect it to gate
+everywhere until a stronger model, do NOT prompt-fix it) each give a never-yet-deciding field-key its first deciding
+appearance (spec.serviceName; the matchExpressions key/values family —
+operator deliberately non-deciding, its cell measures whether the model
+needs it spelled out; the NetworkPolicy ingress port, a bystander in
+networkpolicy-selector-mismatch, completing that key's profile; and
+subjects[].namespace), via backward-compatible template params
+(StatefulSetParams.ServiceName, DeploymentParams.SelectorExprValue,
+RoleBindingParams.SubjectNamespace) — all 69 pre-existing entries render
+byte-identical, hash-verified. Class-balance rules that produced
 these numbers: every class ≥3–5 scenarios; the scored set must not be >50% one
 class (or a constant classifier inflates baselines); every field-key that m3 will
 claim anything about needs ≥2 scenarios where it is non-deciding (the
@@ -95,7 +112,16 @@ itself a controlled context-dilution measurement worth a paper paragraph.
    run-all K=40`, planned on the new inference box). The prompt-v1 K=40 data
    (2026-07-03) was deleted by clean-data before v2 — from now on COMMIT
    data/ + paper/ after every paper run so prompt-generation comparisons stay
-   reproducible.
+   reproducible. 2026-07-09 rule-4 port fix: the pdb-selector-mismatch and
+   replicaset-selector-mismatch pairs had nginx:1.25 with containerPort 8080
+   and nothing else in the bundle anchoring that port — nginx's default (80)
+   made the port itself a second anomaly, and every model flagged the HEALTHY
+   pdb twin (gemma4 40/40 PortMismatch on ports[0], codellama 34/40,
+   ministral 28/40, qwen 12/40 — the only twin gemma4 failed at K=40). Both
+   pairs now use containerPort 80; their shards in ALL data/<model>/ dirs are
+   pre-fix and stale until re-run (values only, field-key set unchanged — and
+   the qwen v2 signal cells pdb kind/apiVersion may not survive the re-run;
+   that is the honest outcome).
 2. **Two renderer artifacts are still TODO** (pure cmd/render work, no model
    calls — can be built and tested against whatever shards exist).
    DONE 2026-07-04 (cmd/render/figures.go, unit-tested): `fieldprofile.gen.tex`

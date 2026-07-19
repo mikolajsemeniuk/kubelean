@@ -17,7 +17,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: {{ .ServiceAccountName }}
-    namespace: {{ .Namespace }}
+    namespace: {{ if .SubjectNamespace }}{{ .SubjectNamespace }}{{ else }}{{ .Namespace }}{{ end }}
 roleRef:
   kind: Role
   name: {{ .RoleName }}

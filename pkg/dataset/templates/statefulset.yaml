@@ -21,7 +21,7 @@ spec:
   {{- if .Created }}
   podManagementPolicy: OrderedReady
   {{- end }}
-  serviceName: {{ .Name }}
+  serviceName: {{ if .ServiceName }}{{ .ServiceName }}{{ else }}{{ .Name }}{{ end }}
   replicas: {{ .Replicas }}
   {{- if .Created }}
   revisionHistoryLimit: 10

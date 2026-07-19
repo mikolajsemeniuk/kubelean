@@ -90,6 +90,10 @@ func All() []Scenario {
 		serviceStatefulSetPortMismatch,
 		pdbSelectorMismatch,
 		networkPolicySelectorMismatch,
+		statefulSetServiceNameWrongName,
+		selectorMatchExpressionsMismatch,
+		networkPolicyPortMismatch,
+		roleBindingSubjectWrongNamespace,
 		secretRefCrowded,
 		secretVolumeCrowded,
 		servicePortCrowded,
@@ -740,7 +744,11 @@ func replicaSetSelectorMismatch(twin bool) Scenario {
 		PodApp:        podApp,
 		ContainerName: "web",
 		Image:         "nginx:1.25",
-		ContainerPort: 8080,
+		// 80, not 8080: nginx serves on 80 by default and nothing else in
+		// this single-doc bundle anchors another port, so a non-default
+		// containerPort is a second anomaly (same wart that broke the pdb
+		// twin — see pdbSelectorMismatch).
+		ContainerPort: 80,
 		ServerMeta:    srv("0b7bbad4-d218-4413-a6f6-1fbdebd23bea", "615340"),
 		Status:        status,
 	})
@@ -1639,10 +1647,17 @@ func pdbSelectorMismatch(twin bool) Scenario {
 		Status:     status,
 	})
 
+	// ContainerPort must be 80 here: nginx serves on 80 by default, and this
+	// bundle has no Service whose port==targetPort==containerPort chain would
+	// legitimize another value. With 8080 the image itself is the second
+	// anomaly (rule: exactly ONE anomalous value) — measured K=40: every model
+	// flagged the HEALTHY twin as PortMismatch on ports[0] (gemma4 40/40,
+	// codellama 34/40, ministral 28/40, qwen 12/40), the only twin gemma4
+	// failed.
 	dep := NewDeployment(DeploymentParams{
 		Name: "web", Namespace: "production", App: "web",
 		Replicas: 3, SelectorApp: "web", PodApp: "web",
-		ContainerName: "web", Image: "nginx:1.25", ContainerPort: 8080,
+		ContainerName: "web", Image: "nginx:1.25", ContainerPort: 80,
 		ServerMeta: srv("9f427d10-5f2b-44e4-a9f5-0da7bfcd1b14", "535677"),
 		Status:     StatusHealthy,
 	})
@@ -1727,6 +1742,166 @@ func roleBindingSubjectWrongName(twin bool) Scenario {
 		DecidingFields: []DecidingField{
 			{Kind: "RoleBinding", Path: "subjects[].name"},
 			{Kind: "ServiceAccount", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(rb, role, sa),
+	})
+}
+
+// statefulSetServiceNameWrongName is a StatefulSet whose governing headless
+// Service reference (spec.serviceName: "cache-hs") matches no Service — the
+// actual headless Service is named "cache-headless". Without its governing
+// Service the pods get no stable per-pod DNS records, so peer discovery (and
+// with it the cluster bootstrap) fails. First deciding appearance of
+// spec.serviceName — no other scenario exercises this reference.
+// Divergence type: abbreviation ("headless" → "hs").
+func statefulSetServiceNameWrongName(twin bool) Scenario {
+	serviceName, status := "cache-hs", StatusFailing
+	if twin {
+		serviceName, status = "cache-headless", StatusHealthy
+	}
+
+	sts := NewStatefulSet(StatefulSetParams{
+		Name: "cache", Namespace: "production", App: "cache",
+		Replicas: 3, SelectorApp: "cache", PodApp: "cache",
+		ContainerName: "cache", Image: "redis:7.2", ContainerPort: 6379,
+		ServiceName: serviceName,
+		ServerMeta:  srv("3f6f1c2a-9d4e-4a1b-8c7d-52e90b1f6a33", "612447"),
+		Status:      status,
+	})
+
+	svc := NewService(ServiceParams{
+		Name: "cache-headless", Namespace: "production", App: "cache",
+		Headless:    true,
+		SelectorApp: "cache", Port: 6379, TargetPort: 6379,
+		ServerMeta: srv("b81d5a97-30c2-45f6-bd28-c1a4de7f9e02", "612501"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "statefulset-servicename-wrong-name",
+		Group:      GroupReferences,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "StatefulSet", Path: "spec.serviceName"},
+			{Kind: "Service", Path: "metadata.name", Hides: true},
+		},
+		YAML: joinDocs(sts, svc),
+	})
+}
+
+// selectorMatchExpressionsMismatch is a single Deployment whose selector is
+// expressed as matchExpressions (app In [api-v2]) while the pod template
+// carries app=api — the same single-document comparison as
+// selector-label-mismatch, but through the expression form. It gives the
+// matchExpressions key family its first deciding appearance (key and
+// values[] decide; every other selector scenario exercises matchLabels
+// only). operator is deliberately NOT deciding: with key+values present the
+// mismatch is still fully readable, so its ablation cell measures whether
+// the model needs the operator spelled out — a genuine map cell, not a
+// tautological one.
+func selectorMatchExpressionsMismatch(twin bool) Scenario {
+	value, status := "api-v2", StatusFailing
+	if twin {
+		value, status = "api", StatusHealthy
+	}
+
+	dep := NewDeployment(DeploymentParams{
+		Name: "api", Namespace: "production", App: "api",
+		Replicas: 2, SelectorExprValue: value, PodApp: "api",
+		ContainerName: "api", Image: "ghcr.io/acme/api:2.4.1", ContainerPort: 8080,
+		ServerMeta: srv("6c2e84d5-71fb-4b09-9a3e-08d4c5b7f1aa", "884210"),
+		Status:     status,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "selector-matchexpressions-mismatch",
+		Group:      GroupSelector,
+		FaultClass: FaultSelectorMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "Deployment", Path: "spec.selector.matchExpressions[].key"},
+			{Kind: "Deployment", Path: "spec.selector.matchExpressions[].values[]"},
+			{Kind: "Deployment", Path: "spec.template.metadata.labels.app"},
+		},
+		YAML: joinDocs(dep),
+	})
+}
+
+// networkPolicyPortMismatch is a NetworkPolicy that allows ingress only on
+// port 8080 while the governed pods serve on containerPort 80 (nginx's
+// default, which anchors the port — rule 4) — every allowed connection
+// targets a port nothing listens on. PortMismatch whose deciding side is the
+// NetworkPolicy port, a key that sits as a healthy bystander in
+// networkpolicy-selector-mismatch — together they complete its cross-scenario
+// profile. Both selectors match the pods, so the port is the only anomaly;
+// the Deployment is healthy either way (a blocked connection is not a pod
+// failure), as in networkpolicy-selector-mismatch.
+func networkPolicyPortMismatch(twin bool) Scenario {
+	port := 8080
+	if twin {
+		port = 80
+	}
+
+	np := NewNetworkPolicy(NetworkPolicyParams{
+		Name: "web-allow", Namespace: "production", App: "web",
+		PodSelectorApp: "web", FromApp: "web", Port: port,
+		ServerMeta: srv("9a0f3d61-2c5b-48e7-b3a9-7f18c64d20be", "471932"),
+	})
+
+	dep := NewDeployment(DeploymentParams{
+		Name: "web", Namespace: "production", App: "web",
+		Replicas: 3, SelectorApp: "web", PodApp: "web",
+		ContainerName: "web", Image: "nginx:1.25", ContainerPort: 80,
+		ServerMeta: srv("e57b920c-84af-4f13-a6d2-3c09b8e15f74", "471988"),
+		Status:     StatusHealthy,
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "networkpolicy-port-mismatch",
+		Group:      GroupNetworking,
+		FaultClass: FaultPortMismatch,
+		DecidingFields: []DecidingField{
+			{Kind: "NetworkPolicy", Path: "spec.ingress[].ports[].port"},
+			{Kind: "Deployment", Path: "spec.template.spec.containers[].ports[].containerPort", Hides: true},
+		},
+		YAML: joinDocs(np, dep),
+	})
+}
+
+// roleBindingSubjectWrongNamespace is a RoleBinding whose subject points at
+// ServiceAccount "report-sa" in namespace "staging", but the SA exists only
+// in "production" (the binding's own namespace) — the grant names a principal
+// that does not exist there. First deciding appearance of
+// subjects[].namespace (secret-wrong-namespace exercises the same
+// wrong-environment shape on a Secret reference), and a third RBAC scenario
+// thickening the thin RoleBinding/Role/SA cross-scenario profiles.
+func roleBindingSubjectWrongNamespace(twin bool) Scenario {
+	subjectNS := "staging"
+	if twin {
+		subjectNS = "production"
+	}
+
+	sa := NewServiceAccount(ServiceAccountParams{
+		Name: "report-sa", Namespace: "production", App: "reporting",
+		ServerMeta: srv("2d94c7e0-6b1f-4028-95c3-df1a08b2e647", "530186"),
+	})
+	role := NewRole(RoleParams{
+		Name: "report-reader", Namespace: "production", App: "reporting",
+		ServerMeta: srv("74e8f1b3-5a26-4c90-8d07-b95c31da6f28", "530212"),
+	})
+	rb := NewRoleBinding(RoleBindingParams{
+		Name: "report-read", Namespace: "production", App: "reporting",
+		ServiceAccountName: "report-sa", SubjectNamespace: subjectNS,
+		RoleName:   "report-reader",
+		ServerMeta: srv("c1a6d20f-38e9-4571-a4b8-06f27c3d94e5", "530240"),
+	})
+
+	return maybeTwin(twin, Scenario{
+		Name:       "rolebinding-subject-wrong-namespace",
+		Group:      GroupRBAC,
+		FaultClass: FaultRefNotFound,
+		DecidingFields: []DecidingField{
+			{Kind: "RoleBinding", Path: "subjects[].namespace"},
+			{Kind: "ServiceAccount", Path: "metadata.namespace", Hides: true},
 		},
 		YAML: joinDocs(rb, role, sa),
 	})

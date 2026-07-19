@@ -19,6 +19,7 @@ type StatefulSetParams struct {
 	ContainerName string
 	Image         string
 	ContainerPort int
+	ServiceName   string // optional: spec.serviceName ("" defaults to Name, the pre-existing behavior); a divergent value is the governing-Service dangling reference
 	ServerMeta           // optional: server-assigned metadata (kubectl get shape)
 	Status        string // optional: StatusHealthy | StatusFailing ("" omits status)
 }

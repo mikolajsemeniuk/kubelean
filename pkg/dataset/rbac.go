@@ -33,6 +33,7 @@ type RoleBindingParams struct {
 	Namespace          string
 	App                string
 	ServiceAccountName string // subjects[].name
+	SubjectNamespace   string // optional: subjects[].namespace ("" defaults to Namespace, the pre-existing behavior); a divergent value binds an SA in a namespace where no such SA exists
 	RoleName           string // roleRef.name
 	ServerMeta                // optional: server-assigned metadata (kubectl get shape)
 }

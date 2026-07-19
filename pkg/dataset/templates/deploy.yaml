@@ -28,8 +28,16 @@ spec:
   revisionHistoryLimit: 10
   {{- end }}
   selector:
+    {{- if .SelectorExprValue }}
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - {{ .SelectorExprValue }}
+    {{- else }}
     matchLabels:
       app: {{ .SelectorApp }}
+    {{- end }}
   {{- if .Created }}
   strategy:
     rollingUpdate:
