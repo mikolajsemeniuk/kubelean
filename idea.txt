@@ -1,3 +1,38 @@
+Potrzebuję twojej pomocy chciałbym napisać serię 3 artykułów naukowych do doktoratu z tematu AI oraz
+  K8S oraz aby dodatkowo abym pozniej mogl uzyc kazdego z tych 3 artykulow tak by tworzyly serie oraz
+
+  Poczatkowo za twoja namowa zdecydowalem sie napisac artykul o optymalizacji kontekstu w k8s. O tym
+  jest caly ten projekt mozesz sie zapoznac jak chcesz. Projekt zaklada testy ablacyjne kazdego pola w
+  manifescie k8s jak metadata, image, name etc przy najczestszych awariach. Nastepnie po wywaleniu pola
+  patrzylismy czy model wciaz jest w stanie rozwiazac zadanie jezeli tak to pole niesie malo sygnalu a
+  jezeli nie to znaczy ze duzo. Projekt jest juz prawie skonczony ale uswiadomilem sobie ze jest
+  troche bez sensu.
+
+  Po pierwsze frontier modele sami w stanie sa sobie optymalizowac context poprzed uzycia toola grep np
+  z Regexem by wyciagnac niezbiedne pola z manifestow jak image, name, namespace i wiedza jakie sa to
+  pola bo maja duzo parametrow jak np 2.8 tryliona paramaterow i ich wagi sa dobrze ztuninogowane.
+
+  Po drugie to modele beda coraz lepsze wiec optymalizacja contextu bedzie postepowac.
+
+  Po trzecie pewnie naprawianie jakis usterek typu zly port albo zly namespace czy zla nazwa configmapy
+  to tak strzelam jakies 5% wszystkich operacji pewnie 95% to odpytywanie klastra k8s przez MCP
+  server.
+
+  Zatem finalnie projekt wydaje mi sie nietrafiony wiec chcialbym teraz abys byl bardziej krytyczny i
+  pomogl ustalic tematy ktore naprawde maja sens i beda spojna seria ktora bedzie mozna wykorzystac to
+  do pracy doktorskiej.
+
+  Mianowicie bardzo podoba mi sie ekosystem claude. Czyli rules, skills, agents, cordinators context
+  passing i mcp servers, system prompts i mysle aby teraz obrac zupelnie inny kierunek mianowcie
+  zastanowic sie nad tym jak faktycznie agenci korzystaja z k8s by ustalic ile procent operacji to a
+  ile to, musimy to znac by moc cos optymalizowac. Nastepnie tak sobie mysle ze moze podobny ekosystem
+  mozna by bylo zaaplikowac do klastra k8s ale nie na drogich modelach frontier tylko moze przy
+  odpowiednich rules, skillsach, agentach koordynatorach, system promptach mozemy jakos zoptymalizowac
+  ich prace i osiagnac podobny wynik przy tanszych modelach jak np nemotron, deepseek, kimi etc na np
+  32b parametrow, czyli skupilibysmy na tuningowaniu contextu tak poprawic wynik tanszych modeli,
+  ewentualnie jakis tool do oceny tooli, system promptu i bysmy to mierzyli przy uzyciu matematycznej
+  formuly i modeli embedding daj znac co o tym sadisz albo zaproponuj cos wlasnego?
+
 Pomysł 2 (ekosystem rules/skills/agents na modelach 32B) — to jest najmocniejszy pomysł i powinien być
   rdzeniem doktoratu. Ale sformułuj go jako pytanie mierzalne: ile luki między modelem 32B a frontier
   na zadaniach operacyjnych K8s zamyka każdy komponent harnessu, i jakim kosztem? Czyli ablacja
