@@ -19,5 +19,6 @@ docker compose --profile $MODEL down
 ## Test
 
 ```sh
+export MODEL=minimax-m2.7
 curl -s http://localhost:12000/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"'"$MODEL"'","messages":[{"role":"user","content":"hi"}],"max_tokens":30}' | python3 -m json.tool
 ```
