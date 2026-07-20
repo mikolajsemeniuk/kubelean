@@ -190,7 +190,7 @@ services:
       - hermes
 
   gemma-4:
-    image: vllm/vllm-openai:v0.20.0-cu130
+    image: vllm/vllm-openai:latest
     profiles: ["gemma-4"]
     network_mode: host
     ipc: host
