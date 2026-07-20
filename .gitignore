@@ -1,0 +1,5 @@
+# local secrets / env
+.env
+
+# claude code local state
+.claude/

@@ -1,0 +1,321 @@
+services:
+  # MiniMax-M2.7 172B-A10B (NVFP4). Profil: minimax
+  minimax-m2.7:
+    image: vllm/vllm-openai:v0.18.0-cu130
+    profiles: ["minimax-m2.7"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - VLLM_NVFP4_GEMM_BACKEND=flashinfer-cutlass
+      - VLLM_USE_FLASHINFER_MOE_FP4=0
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - saricles/MiniMax-M2.7-REAP-172B-A10B-NVFP4-GB10
+      - --served-model-name
+      - minimax-m2.7
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.93"
+      - --max-model-len
+      - "131072"
+      - --max-num-seqs
+      - "32"
+      - --kv-cache-dtype
+      - fp8_e4m3
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - minimax_m2
+      - --reasoning-parser
+      - minimax_m2_append_think
+      - --trust-remote-code
+
+  glm-4.5-air:
+    image: vllm/vllm-openai:glm52-arm64-cu130
+    profiles: ["glm-4.5-air"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - VLLM_NVFP4_GEMM_BACKEND=marlin
+      - VLLM_TEST_FORCE_FP8_MARLIN=1
+      - VLLM_USE_FLASHINFER_MOE_FP4=0
+      - VLLM_MARLIN_USE_ATOMIC_ADD=1
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - Firworks/GLM-4.5-Air-REAP-82B-A12B-nvfp4
+      - --served-model-name
+      - glm-4.5-air
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "131072"
+      - --max-num-seqs
+      - "32"
+      - --kv-cache-dtype
+      - fp8
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - glm45
+      - --reasoning-parser
+      - glm45
+      - --trust-remote-code
+
+  codellama:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["codellama"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - codellama/CodeLlama-13b-Instruct-hf
+      - --served-model-name
+      - codellama
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "16384"
+      - --max-num-seqs
+      - "32"
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+
+  qwen2.5:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["qwen2.5"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - Qwen/Qwen2.5-7B-Instruct
+      - --served-model-name
+      - qwen2.5
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "32768"
+      - --max-num-seqs
+      - "32"
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - hermes
+
+  gemma-4:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["gemma-4"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - google/gemma-4-12B-it
+      - --served-model-name
+      - gemma-4
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "32768"
+      - --max-num-seqs
+      - "32"
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --trust-remote-code
+
+  lfm2.5:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["lfm2.5"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - LiquidAI/LFM2.5-8B-A1B
+      - --served-model-name
+      - lfm2.5
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "32768"
+      - --max-num-seqs
+      - "32"
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --trust-remote-code
+
+  ministral-3:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["ministral-3"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - mistralai/Ministral-3-8B-Instruct-2512
+      - --served-model-name
+      - ministral-3
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "32768"
+      - --max-num-seqs
+      - "32"
+      - --tokenizer-mode
+      - mistral
+      - --config-format
+      - mistral
+      - --load-format
+      - mistral
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - mistral
+
+volumes:
+  vllm-cache:
