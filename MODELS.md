@@ -10,7 +10,7 @@
 ## Start
 
 ```sh
-export MODEL=codellama
+export MODEL=minimax-m2.7
 docker compose --profile $MODEL up -d
 docker compose --profile $MODEL logs -f
 docker compose --profile $MODEL down
