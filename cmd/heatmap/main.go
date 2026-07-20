@@ -89,15 +89,12 @@ type ChatClient interface {
 }
 
 func main() {
-	// flag.StringVar(&host, "host", "http://localhost:11434", "Ollama host")
-	// flag.StringVar(&host, "host", "http://192.168.100.121:11434", "Ollama host")
-	flag.StringVar(&host, "host", "http://192.168.100.121:12000", "Ollama host")
+	flag.StringVar(&host, "host", "http://localhost:12000", "inference host (vLLM default port; Ollama runs on http://localhost:11434)")
 	flag.StringVar(&model, "model", "qwen2.5:7b-instruct", "model name")
 	flag.StringVar(&out, "out", "data", "root output directory for JSONL shards (a per-model subdirectory is appended)")
 	flag.StringVar(&group, "group", "", "scenario group to produce")
 	flag.IntVar(&k, "k", 10, "samples per variant (seed = 0..k-1)")
-	// flag.StringVar(&backend, "backend", "ollama", "inference backend: ollama or vllm")
-	flag.StringVar(&backend, "backend", "vllm", "inference backend: ollama or vllm")
+	flag.StringVar(&backend, "backend", "vllm", "inference backend: ollama or vllm — one backend per model directory (mixing quantizations breaks digest comparability)")
 	flag.Float64Var(&temp, "temp", 0.7, "sampling temperature (>0 so seeds give varied draws)")
 	flag.IntVar(&numCtx, "num-ctx", 8192, "context window — avoids silent truncation of multi-doc prompts")
 	flag.IntVar(&numPredict, "num-predict", 256, "max output tokens")

@@ -6,36 +6,44 @@ K ?= 40
 
 # The RCA model under test. Shards land in data/<model>/ and artifacts in
 # paper/<model>/, so runs for different models never overwrite each other:
-#   make run-all MODEL=qwen2.5:32b-instruct && make render MODEL=ministral-3:8b
-MODEL ?= ministral-3:8b
+#   make run-all MODEL=qwen3:14b && make render MODEL=qwen3:14b
+MODEL ?= qwen2.5:7b-instruct
+
+# Inference endpoint. One backend per model directory — mixing Ollama and vLLM
+# shards for the same model mixes quantizations/weights and breaks digest
+# comparability (this happened to gemma4: 33 Ollama + 36 vLLM shards).
+HOST ?= http://192.168.100.121:12000
+BACKEND ?= vllm
+
+PRODUCE = go run ./cmd/heatmap -host $(HOST) -backend $(BACKEND) -model $(MODEL)
 
 # The cheap #12 gate check: baselines only, low k, no shards written. Run it
 # after any generator/prompt change, before committing to a full run.
 smoke:
 	for g in selector references networking volumes scaling rbac healthy; do \
-		go run ./cmd/heatmap -group $$g -baseline-only -k 3 -model $(MODEL); \
+		$(PRODUCE) -group $$g -baseline-only -k 3; \
 	done
 
 run-selector:
-	go run ./cmd/heatmap -group selector -k $(K) -model $(MODEL)
+	$(PRODUCE) -group selector -k $(K)
 
 run-references:
-	go run ./cmd/heatmap -group references -k $(K) -model $(MODEL)
+	$(PRODUCE) -group references -k $(K)
 
 run-networking:
-	go run ./cmd/heatmap -group networking -k $(K) -model $(MODEL)
+	$(PRODUCE) -group networking -k $(K)
 
 run-volumes:
-	go run ./cmd/heatmap -group volumes -k $(K) -model $(MODEL)
+	$(PRODUCE) -group volumes -k $(K)
 
 run-scaling:
-	go run ./cmd/heatmap -group scaling -k $(K) -model $(MODEL)
+	$(PRODUCE) -group scaling -k $(K)
 
 run-rbac:
-	go run ./cmd/heatmap -group rbac -k $(K) -model $(MODEL)
+	$(PRODUCE) -group rbac -k $(K)
 
 run-healthy:
-	go run ./cmd/heatmap -group healthy -k $(K) -model $(MODEL)
+	$(PRODUCE) -group healthy -k $(K)
 
 run-all: run-selector run-references run-networking run-volumes run-scaling run-rbac run-healthy
 

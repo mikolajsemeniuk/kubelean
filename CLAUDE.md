@@ -142,10 +142,31 @@ itself a controlled context-dilution measurement worth a paper paragraph.
      Category is recorded on every reduced trial and the ablate.go docs promise the
      three kinds are "separate populations", but no table shows them. Per category:
      cell count, saliency distribution, signal count, mean healthy-bundle FP.
-3. After the 7B run renders clean: the **multi-model run** (`make run-all K=40
-   MODEL=qwen2.5:32b-instruct` etc.) — the per-model data/paper isolation is already
-   in place; it un-gates the scenarios 7B cannot diagnose (RBAC, HPA/VPA, storage,
-   most of the new coverage) and is the paper's answer to "is this just the model?".
+3. **Multi-model run v1 (2026-07, K=40) — DONE, but needs a clean re-run.**
+   Four models produced: codellama-13b (ALL 33 faulty scenarios gated — zero
+   scored data; dropped from the ladder, data kept as honest coverage),
+   ministral-3-8b (14 scored, 0 signal), qwen2.5-7b-instruct (10 scored, 2
+   signal — both on the port-bug-contaminated pdb scenario), **gemma4-12b (32
+   of 33 scored, 1688 cells, 8 signal — the workhorse; its signals are the
+   paper's best material: target-object `kind` at saliency 1.00 b=40/c=0,
+   `metadata/namespace` 0.97, the NetworkPolicy ingress port 0.67)**. Three
+   defects force the re-run (all verified 2026-07-20):
+   - **gemma mixes two inference backends** — 33 shards via Ollama (hex weight
+     digest) + 36 via vLLM (digest = model name, no weight pinning). Pairs are
+     backend-consistent and per-scenario saliency is internally consistent,
+     but the cross-scenario fieldprofile (the m3 input) mixes quantizations.
+   - **qwen shards predate the 2026-07-06 realism fixes** (hpa-target and
+     healthy-web-stack have 2 fewer field-keys than the other models) and ALL
+     four models' pdb/replicaset pairs predate the 2026-07-09 port fix — so
+     qwen's only 2 signal cells sit entirely on stale data.
+   - **the 4 newest scenarios (2026-07-09) have no shards in any model dir**
+     (69 files per dir, not 77).
+   Plan: `make clean-data && make run-all K=40 MODEL=<m>` per model, ALL on
+   vLLM (one backend per model dir — now a stated contract rule), ladder =
+   qwen2.5:7b-instruct → ministral-3:8b → gemma4:12b → **qwen3:14b** (the
+   codellama replacement; profile in docker-compose, rationale in MODELS.md).
+   Fill the weight-pinning table in MODELS.md before the run (vLLM has no
+   digest). `make smoke MODEL=qwen3:14b` first, per rule #12.
 
 **Load-bearing reality — read this before adding scenarios:** the RCA model is a small
 local model (qwen2.5:7b-instruct via Ollama). It reliably diagnoses only a *subset* of
@@ -304,10 +325,13 @@ make clean-data           # rm -rf data/*
 go run ./cmd/viewer       # http://localhost:8080  (/ and /confidence)
 ```
 
-Every target takes `MODEL=<ollama tag>` (default qwen2.5:7b-instruct) and `K=`.
+Every target takes `MODEL=<tag>` (default qwen2.5:7b-instruct), `K=`, plus
+`HOST=` (default http://192.168.100.121:12000) and `BACKEND=` (vllm | ollama,
+default vllm) for the producer targets.
 
 Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7),
-`-num-ctx` (8192), `-model`, `-out` (data). Overwrites each scenario's shard.
+`-num-ctx` (8192), `-model`, `-out` (data), `-host`, `-backend`. Overwrites each
+scenario's shard (resume-friendly: existing shards are skipped without `-force`).
 
 ## The measurement contract (do not violate)
 
@@ -316,7 +340,11 @@ Producer flags (cmd/heatmap): `-group`, `-k` (samples, default 10), `-temp` (0.7
 - **Determinism / reproducibility.** Model pinned by **digest** (via Ollama `/api/tags`);
   every shard records the digest. **One digest across all shards** or saliency isn't
   comparable (the renderer warns). Generators are seed-free but fully deterministic
-  (static templates + typed structs).
+  (static templates + typed structs). **One inference backend per model directory:**
+  vLLM exposes no weights hash (its "digest" is just the served model name), so a
+  vLLM paper run must record the exact HF revision + dtype/quant in MODELS.md, and
+  Ollama/vLLM shards must never mix for one model (different quantizations are
+  different weights — the gemma4 v1 run violated this: 33 + 36 shards).
 - **Raw first.** Write per-trial `Record`s to JSONL, then render from that file. Tables
   must regenerate without touching the model. `Valid` is recorded per trial as a
   covariate (a removal that breaks a required field is still scored, just flagged).

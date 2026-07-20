@@ -189,6 +189,57 @@ services:
       - --tool-call-parser
       - hermes
 
+  # Qwen3-14B — the codellama-13b replacement in the model ladder (codellama
+  # gated out on ALL 33 faulty scenarios at K=40, contributing zero scored
+  # data). Dense 14B ≈ gemma-12B runtime; hybrid-thinking model, but
+  # pkg/providers/vllm.go sends chat_template_kwargs {"enable_thinking": false}
+  # so responses stay compact JSON within -num-predict. served-model-name uses
+  # the Ollama-style tag so `make run-all MODEL=qwen3:14b` namespaces shards to
+  # data/qwen3-14b/ like the other models.
+  qwen3-14b:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["qwen3-14b"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - Qwen/Qwen3-14B
+      - --served-model-name
+      - qwen3:14b
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "32768"
+      - --max-num-seqs
+      - "32"
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - hermes
+
   gemma-4:
     image: vllm/vllm-openai:latest
     profiles: ["gemma-4"]
