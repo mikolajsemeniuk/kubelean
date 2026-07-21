@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"time"
@@ -91,6 +90,7 @@ func (o *Ollama) Digest(ctx context.Context, model string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ollama: build tags request: %w", err)
 	}
+
 	res, err := o.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("ollama: tags http: %w", err)
@@ -111,11 +111,13 @@ func (o *Ollama) Digest(ctx context.Context, model string) (string, error) {
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		return "", fmt.Errorf("ollama: decode tags: %w", err)
 	}
+
 	for _, m := range out.Models {
 		if m.Name == model || m.Model == model {
 			return m.Digest, nil
 		}
 	}
+
 	return "", fmt.Errorf("ollama: model %q not found in tags", model)
 }
 
@@ -125,23 +127,27 @@ func (o *Ollama) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: marshal request: %w", err)
 	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.Host+"/api/generate", bytes.NewReader(input))
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: build request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 	res, err := o.httpClient.Do(req)
 	if err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: http: %w", err)
 	}
+
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		raw, _ := io.ReadAll(res.Body)
-		return ChatOutput{}, fmt.Errorf("ollama: status %d: %s", res.StatusCode, string(raw))
+		return ChatOutput{}, fmt.Errorf("ollama: status %d", res.StatusCode)
 	}
+
 	var out ChatOutput
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		return ChatOutput{}, fmt.Errorf("ollama: decode response: %w", err)
 	}
+
 	return out, nil
 }
