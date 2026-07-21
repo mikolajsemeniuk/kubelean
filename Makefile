@@ -12,17 +12,10 @@ MODEL ?= qwen2.5:7b-instruct
 # Inference endpoint. One backend per model directory — mixing Ollama and vLLM
 # shards for the same model mixes quantizations/weights and breaks digest
 # comparability (this happened to gemma4: 33 Ollama + 36 vLLM shards).
-HOST ?= http://192.168.100.121:12000
+HOST ?= http://localhost:12000
 BACKEND ?= vllm
 
 PRODUCE = go run ./cmd/heatmap -host $(HOST) -backend $(BACKEND) -model $(MODEL)
-
-# The cheap #12 gate check: baselines only, low k, no shards written. Run it
-# after any generator/prompt change, before committing to a full run.
-smoke:
-	for g in selector references networking volumes scaling rbac healthy; do \
-		$(PRODUCE) -group $$g -baseline-only -k 3; \
-	done
 
 run-selector:
 	$(PRODUCE) -group selector -k $(K)

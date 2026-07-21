@@ -271,14 +271,19 @@ services:
       - --port
       - "12000"
       - --gpu-memory-utilization
-      - "0.90"
+      - "0.92"
       - --max-model-len
       - "32768"
       - --max-num-seqs
-      - "32"
-      - --compilation-config
-      - '{"cudagraph_mode": "none"}'
-      - --trust-remote-code
+      - "128"
+      - --quantization
+      - fp8
+      - --kv-cache-dtype
+      - fp8_e4m3
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+      - --speculative-config
+      - '{"method": "ngram", "num_speculative_tokens": 4, "prompt_lookup_min": 2, "prompt_lookup_max": 5}'
 
   lfm2.5:
     image: vllm/vllm-openai:v0.20.0-cu130
@@ -315,10 +320,14 @@ services:
       - --max-model-len
       - "32768"
       - --max-num-seqs
-      - "32"
+      - "128"
       - --compilation-config
       - '{"cudagraph_mode": "none"}'
       - --trust-remote-code
+      - --quantization
+      - fp8
+      - --kv-cache-dtype
+      - fp8_e4m3
 
   ministral-3:
     image: vllm/vllm-openai:v0.20.0-cu130
