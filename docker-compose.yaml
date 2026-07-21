@@ -191,11 +191,11 @@ services:
       - --attention-backend
       - TRITON_ATTN
       - --gpu-memory-utilization
-      - "0.85"
+      - "0.9"
       - --max-model-len
       - "16384"
       - --max-num-seqs
-      - "64"
+      - "128"
 
   # Calibrated FP8-dynamic quant of microsoft/phi-4 by Red Hat/Neural Magic
   # (measured 99.9% accuracy recovery vs bf16) - preferred over online
@@ -237,11 +237,11 @@ services:
       - --attention-backend
       - TRITON_ATTN
       - --gpu-memory-utilization
-      - "0.85"
+      - "0.9"
       - --max-model-len
       - "16384"
       - --max-num-seqs
-      - "64"
+      - "128"
 
   gemma-4:
     image: vllm/vllm-openai:latest
@@ -329,11 +329,11 @@ services:
       - --attention-backend
       - TRITON_ATTN
       - --gpu-memory-utilization
-      - "0.85"
+      - "0.9"
       - --max-model-len
       - "16384"
       - --max-num-seqs
-      - "64"
+      - "128"
       - --tokenizer-mode
       - mistral
       - --config-format
