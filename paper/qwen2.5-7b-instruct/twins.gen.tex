@@ -6,42 +6,46 @@
 % discrimination, 0 = pure bias (the model answers the same regardless of
 % whether the fault is present). Bold = the 95% Newcombe CI of J excludes 0.
 % Rates carry 95% Wilson CIs. \input-able; requires \usepackage{booktabs}.
-% model: qwen2.5:7b-instruct @ 845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e ; k=40 ; temp=0.70 ; num_ctx=8192
+% model: qwen2.5:7b-instruct @ qwen2.5:7b-instruct ; k=40 ; temp=0.70 ; num_ctx=8192
 \begin{tabular}{llrcrcrc}
 \toprule
 Scenario & Fault & Baseline acc & 95\% CI & Twin NoFault & 95\% CI & J & 95\% CI \\
 \midrule
-\textbf{clusterrolebinding-role-wrong-name} & Ref\_NotFound & 0.72 & [0.57, 0.84] & 0.93 & [0.80, 0.97] & 0.65 & [0.45, 0.77] \\
-configmap-ref-crowded & Ref\_NotFound & 0.10 & [0.04, 0.23] & 1.00 & [0.91, 1.00] & 0.10 & [-0.01, 0.23] \\
-\textbf{configmap-ref-wrong-name} & Ref\_NotFound & 0.90 & [0.77, 0.96] & 0.72 & [0.57, 0.84] & 0.62 & [0.42, 0.75] \\
+clusterrolebinding-role-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+configmap-ref-crowded & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+\textbf{configmap-ref-wrong-name} & Ref\_NotFound & 0.90 & [0.77, 0.96] & 1.00 & [0.91, 1.00] & 0.90 & [0.74, 0.96] \\
 configmap-volume-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
 daemonset-selector-mismatch & SelectorMismatch & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
-env-key-wrong-name & Ref\_NotFound & 0.10 & [0.04, 0.23] & 1.00 & [0.91, 1.00] & 0.10 & [-0.01, 0.23] \\
-\textbf{hpa-target-wrong-name} & Ref\_NotFound & 0.35 & [0.22, 0.50] & 1.00 & [0.91, 1.00] & 0.35 & [0.19, 0.50] \\
-imagepull-secret-wrong-name & Ref\_NotFound & 0.88 & [0.74, 0.95] & 0.00 & [0.00, 0.09] & -0.12 & [-0.26, -0.01] \\
-ingress-backend-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 0.15 & [0.07, 0.29] & -0.85 & [-0.93, -0.68] \\
-\textbf{ingress-backend-wrong-port} & PortMismatch & 1.00 & [0.91, 1.00] & 0.62 & [0.47, 0.76] & 0.62 & [0.45, 0.76] \\
+env-key-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+\textbf{hpa-target-wrong-name} & Ref\_NotFound & 0.23 & [0.12, 0.38] & 1.00 & [0.91, 1.00] & 0.23 & [0.09, 0.38] \\
+\textbf{imagepull-secret-wrong-name} & Ref\_NotFound & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
+ingress-backend-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 0.40 & [0.26, 0.55] & -0.60 & [-0.74, -0.42] \\
+\textbf{ingress-backend-wrong-port} & PortMismatch & 1.00 & [0.91, 1.00] & 0.35 & [0.22, 0.50] & 0.35 & [0.19, 0.50] \\
 job-secret-wrong-name & Ref\_NotFound & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] & 0.00 & [-0.09, 0.09] \\
-networkpolicy-selector-mismatch & SelectorMismatch & 0.25 & [0.14, 0.40] & 0.88 & [0.74, 0.95] & 0.12 & [-0.05, 0.29] \\
-\textbf{pdb-selector-mismatch} & SelectorMismatch & 0.88 & [0.74, 0.95] & 0.70 & [0.55, 0.82] & 0.57 & [0.37, 0.71] \\
-priorityclass-wrong-name & Ref\_NotFound & 0.10 & [0.04, 0.23] & 1.00 & [0.91, 1.00] & 0.10 & [-0.01, 0.23] \\
+\textbf{networkpolicy-port-mismatch} & PortMismatch & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
+\textbf{networkpolicy-selector-mismatch} & SelectorMismatch & 1.00 & [0.91, 1.00] & 0.72 & [0.57, 0.84] & 0.72 & [0.55, 0.84] \\
+\textbf{pdb-selector-mismatch} & SelectorMismatch & 1.00 & [0.91, 1.00] & 0.68 & [0.52, 0.80] & 0.68 & [0.50, 0.80] \\
+\textbf{priorityclass-wrong-name} & Ref\_NotFound & 0.17 & [0.09, 0.32] & 1.00 & [0.91, 1.00] & 0.17 & [0.05, 0.32] \\
 pvc-claim-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
-\textbf{replicaset-selector-mismatch} & SelectorMismatch & 0.28 & [0.16, 0.43] & 1.00 & [0.91, 1.00] & 0.28 & [0.13, 0.43] \\
-\textbf{rolebinding-role-wrong-name} & Ref\_NotFound & 0.97 & [0.87, 1.00] & 0.82 & [0.68, 0.91] & 0.80 & [0.62, 0.89] \\
-rolebinding-subject-wrong-name & Ref\_NotFound & 0.85 & [0.71, 0.93] & 0.33 & [0.20, 0.48] & 0.17 & [-0.01, 0.35] \\
-\textbf{secret-ref-crowded} & Ref\_NotFound & 0.35 & [0.22, 0.50] & 1.00 & [0.91, 1.00] & 0.35 & [0.19, 0.50] \\
-\textbf{secret-ref-wrong-name} & Ref\_NotFound & 0.90 & [0.77, 0.96] & 0.35 & [0.22, 0.50] & 0.25 & [0.07, 0.42] \\
-secret-volume-crowded & Ref\_NotFound & 0.07 & [0.03, 0.20] & 1.00 & [0.91, 1.00] & 0.07 & [-0.03, 0.20] \\
-\textbf{secret-volume-wrong-name} & Ref\_NotFound & 0.60 & [0.45, 0.74] & 1.00 & [0.91, 1.00] & 0.60 & [0.42, 0.74] \\
-secret-wrong-namespace & Ref\_NotFound & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] & 0.00 & [-0.09, 0.09] \\
+\textbf{replicaset-selector-mismatch} & SelectorMismatch & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
+rolebinding-role-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+rolebinding-subject-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+\textbf{rolebinding-subject-wrong-namespace} & Ref\_NotFound & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
+\textbf{secret-ref-crowded} & Ref\_NotFound & 0.30 & [0.18, 0.45] & 1.00 & [0.91, 1.00] & 0.30 & [0.15, 0.45] \\
+\textbf{secret-ref-wrong-name} & Ref\_NotFound & 0.30 & [0.18, 0.45] & 1.00 & [0.91, 1.00] & 0.30 & [0.15, 0.45] \\
+\textbf{secret-volume-crowded} & Ref\_NotFound & 0.15 & [0.07, 0.29] & 1.00 & [0.91, 1.00] & 0.15 & [0.03, 0.29] \\
+\textbf{secret-volume-wrong-name} & Ref\_NotFound & 0.17 & [0.09, 0.32] & 1.00 & [0.91, 1.00] & 0.17 & [0.05, 0.32] \\
+\textbf{secret-wrong-namespace} & Ref\_NotFound & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
 selector-label-mismatch & SelectorMismatch & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
-\textbf{service-port-crowded} & PortMismatch & 0.17 & [0.09, 0.32] & 1.00 & [0.91, 1.00] & 0.17 & [0.05, 0.32] \\
+selector-matchexpressions-mismatch & SelectorMismatch & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+\textbf{service-port-crowded} & PortMismatch & 0.33 & [0.20, 0.48] & 1.00 & [0.91, 1.00] & 0.33 & [0.17, 0.48] \\
 \textbf{service-port-mismatch} & PortMismatch & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
-service-selector-mismatch & SelectorMismatch & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+\textbf{service-selector-mismatch} & SelectorMismatch & 0.45 & [0.31, 0.60] & 1.00 & [0.91, 1.00] & 0.45 & [0.28, 0.60] \\
 \textbf{service-statefulset-port-mismatch} & PortMismatch & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
-\textbf{serviceaccount-wrong-name} & Ref\_NotFound & 0.93 & [0.80, 0.97] & 1.00 & [0.91, 1.00] & 0.93 & [0.77, 0.97] \\
-\textbf{statefulset-selector-mismatch} & SelectorMismatch & 0.88 & [0.74, 0.95] & 1.00 & [0.91, 1.00] & 0.88 & [0.71, 0.95] \\
-\textbf{storageclass-wrong-name} & Ref\_NotFound & 0.82 & [0.68, 0.91] & 0.75 & [0.60, 0.86] & 0.57 & [0.37, 0.71] \\
+\textbf{serviceaccount-wrong-name} & Ref\_NotFound & 0.35 & [0.22, 0.50] & 1.00 & [0.91, 1.00] & 0.35 & [0.19, 0.50] \\
+\textbf{statefulset-selector-mismatch} & SelectorMismatch & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
+statefulset-servicename-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
+\textbf{storageclass-wrong-name} & Ref\_NotFound & 1.00 & [0.91, 1.00] & 1.00 & [0.91, 1.00] & 1.00 & [0.88, 1.00] \\
 volumemount-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
 vpa-target-wrong-name & Ref\_NotFound & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] & 0.00 & [-0.09, 0.09] \\
 \bottomrule

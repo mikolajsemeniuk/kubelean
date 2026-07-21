@@ -168,7 +168,7 @@ configmap-ref-wrong-name & Deployment & \texttt{/status/replicas} & 0.00 & [-0.0
 configmap-ref-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & 0.00 & [-0.09, 0.09] & no \\
 configmap-ref-wrong-name & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-configmap-ref-wrong-name & ConfigMap & \textbf{\texttt{/kind}} & 1.00 & [0.88, 1.00] & signal \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
 configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
@@ -297,7 +297,7 @@ env-key-wrong-name & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 
 env-key-wrong-name & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [-0.09, 0.09] & no \\
 env-key-wrong-name & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.00 & [-0.09, 0.09] & no \\
 env-key-wrong-name & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.00 & [-0.09, 0.09] & no \\
-env-key-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.03 & [-0.07, 0.13] & control \\
+env-key-wrong-name & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.00 & [-0.09, 0.09] & control \\
 env-key-wrong-name & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.00 & [-0.09, 0.09] & control \\
 env-key-wrong-name & Deployment & \texttt{/status/conditions/*/message} & 0.00 & [-0.09, 0.09] & no \\
 env-key-wrong-name & Deployment & \texttt{/status/conditions/*/reason} & 0.00 & [-0.09, 0.09] & no \\
@@ -443,7 +443,7 @@ ingress-backend-wrong-name & Ingress & \texttt{/spec/rules/*/http/paths/*/pathTy
 ingress-backend-wrong-name & Ingress & \texttt{/spec/rules/*/http/paths/*/backend/service/port/number} & 0.00 & [-0.09, 0.09] & no \\
 ingress-backend-wrong-name & Ingress & \texttt{/status/loadBalancer/ingress/*/ip} & 0.00 & [-0.09, 0.09] & no \\
 ingress-backend-wrong-name & Service & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-ingress-backend-wrong-name & Service & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+ingress-backend-wrong-name & Service & \textbf{\texttt{/kind}} & 1.00 & [0.88, 1.00] & signal \\
 ingress-backend-wrong-name & Service & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 ingress-backend-wrong-name & Service & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
 ingress-backend-wrong-name & Service & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
@@ -610,59 +610,167 @@ job-secret-wrong-name & Secret & \texttt{/metadata/resourceVersion} & 0.00 & [-0
 job-secret-wrong-name & Secret & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
 job-secret-wrong-name & Secret & \texttt{/type} & 0.00 & [-0.09, 0.09] & no \\
 job-secret-wrong-name & Secret & \texttt{/data} & 0.00 & [-0.09, 0.09] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/apiVersion} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/kind} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/creationTimestamp} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/generation} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/name} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/namespace} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \textbf{\texttt{/metadata/labels}} & 0.95 & [0.81, 0.99] & signal \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/resourceVersion} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/uid} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/policyTypes/*} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/from/*/podSelector/matchLabels} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/ports/*/protocol} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & NetworkPolicy & \textbf{\texttt{/spec/ingress/*/ports/*/port}} & 0.67 & [0.48, 0.79] & signal \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/apiVersion} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/kind} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/annotations} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/creationTimestamp} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/generation} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/name} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/namespace} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/labels} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/resourceVersion} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/uid} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/progressDeadlineSeconds} & -0.03 & [-0.14, 0.08] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/replicas} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/revisionHistoryLimit} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & -0.03 & [-0.14, 0.08] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/strategy/type} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/dnsPolicy} & -0.03 & [-0.14, 0.08] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/restartPolicy} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/schedulerName} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/availableReplicas} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & -0.05 & [-0.17, 0.04] & control \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/message} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/reason} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/status} & 0.02 & [-0.10, 0.15] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/type} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/observedGeneration} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/readyReplicas} & -0.05 & [-0.17, 0.04] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.12, 0.12] & no \\
-networkpolicy-selector-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.12, 0.12] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/spec/podSelector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/spec/policyTypes/*} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/from/*/podSelector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/progressDeadlineSeconds} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/revisionHistoryLimit} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/strategy/type} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/availableReplicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/conditions/*/message} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/conditions/*/reason} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/conditions/*/status} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/conditions/*/type} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/observedGeneration} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/readyReplicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-port-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \textbf{\texttt{/metadata/labels}} & 1.00 & [0.88, 1.00] & signal \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/policyTypes/*} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/from/*/podSelector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/ports/*/port} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/progressDeadlineSeconds} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/revisionHistoryLimit} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/strategy/type} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.03 & [-0.07, 0.13] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/availableReplicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.00 & [-0.09, 0.09] & control \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/message} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/reason} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/status} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/conditions/*/type} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/observedGeneration} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/readyReplicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.09, 0.09] & no \\
+networkpolicy-selector-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/spec/minAvailable} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/currentHealthy} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/desiredHealthy} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/disruptionsAllowed} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/expectedPods} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/status/observedGeneration} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/progressDeadlineSeconds} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/revisionHistoryLimit} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/strategy/type} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/availableReplicas} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.00 & [-0.09, 0.09] & control \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/message} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/reason} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/status} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/conditions/*/type} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/observedGeneration} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/readyReplicas} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.09, 0.09] & no \\
+pdb-selector-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
 priorityclass-wrong-name & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
 priorityclass-wrong-name & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
 priorityclass-wrong-name & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
@@ -808,7 +916,7 @@ rolebinding-role-wrong-name & RoleBinding & \texttt{/subjects/*/namespace} & 0.0
 rolebinding-role-wrong-name & RoleBinding & \texttt{/roleRef/kind} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/roleRef/apiGroup} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-role-wrong-name & Role & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-rolebinding-role-wrong-name & Role & \textbf{\texttt{/kind}} & 1.00 & [0.88, 1.00] & signal \\
+rolebinding-role-wrong-name & Role & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-role-wrong-name & Role & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 rolebinding-role-wrong-name & Role & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-role-wrong-name & Role & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
@@ -851,13 +959,45 @@ rolebinding-subject-wrong-name & Role & \texttt{/rules/*/apiGroups/*} & 0.00 & [
 rolebinding-subject-wrong-name & Role & \texttt{/rules/*/resources/*} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-subject-wrong-name & Role & \texttt{/rules/*/verbs/*} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-rolebinding-subject-wrong-name & ServiceAccount & \textbf{\texttt{/kind}} & 0.90 & [0.74, 0.96] & signal \\
+rolebinding-subject-wrong-name & ServiceAccount & \textbf{\texttt{/kind}} & 1.00 & [0.88, 1.00] & signal \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/automountServiceAccountToken} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/subjects/*/kind} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/subjects/*/name} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/roleRef/kind} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/roleRef/name} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/roleRef/apiGroup} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/rules/*/apiGroups/*} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/rules/*/resources/*} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & Role & \texttt{/rules/*/verbs/*} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/automountServiceAccountToken} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
@@ -905,7 +1045,7 @@ secret-ref-crowded & Deployment & \texttt{/status/replicas} & 0.00 & [-0.09, 0.0
 secret-ref-crowded & Deployment & \texttt{/status/unavailableReplicas} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Secret & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-secret-ref-crowded & Secret & \textbf{\texttt{/kind}} & 0.53 & [0.35, 0.67] & signal \\
+secret-ref-crowded & Secret & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Secret & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 secret-ref-crowded & Secret & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
 secret-ref-crowded & Secret & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
@@ -1126,7 +1266,7 @@ secret-volume-wrong-name & Deployment & \texttt{/status/replicas} & 0.00 & [-0.0
 secret-volume-wrong-name & Deployment & \texttt{/status/unavailableReplicas} & 0.00 & [-0.09, 0.09] & no \\
 secret-volume-wrong-name & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
 secret-volume-wrong-name & Secret & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-secret-volume-wrong-name & Secret & \texttt{/kind} & 0.20 & [0.07, 0.35] & no \\
+secret-volume-wrong-name & Secret & \texttt{/kind} & 0.05 & [-0.04, 0.17] & no \\
 secret-volume-wrong-name & Secret & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 secret-volume-wrong-name & Secret & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
 secret-volume-wrong-name & Secret & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
@@ -1139,7 +1279,7 @@ secret-wrong-namespace & Deployment & \texttt{/metadata/annotations} & 0.00 & [-
 secret-wrong-namespace & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 secret-wrong-namespace & Deployment & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
 secret-wrong-namespace & Deployment & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
-secret-wrong-namespace & Deployment & \textbf{\texttt{/metadata/namespace}} & 0.97 & [0.84, 1.00] & signal \\
+secret-wrong-namespace & Deployment & \texttt{/metadata/namespace} & 0.32 & [0.17, 0.48] & no \\
 secret-wrong-namespace & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
 secret-wrong-namespace & Deployment & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
 secret-wrong-namespace & Deployment & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
@@ -1219,6 +1359,45 @@ selector-label-mismatch & Deployment & \texttt{/status/observedGeneration} & 0.0
 selector-label-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.09, 0.09] & no \\
 selector-label-mismatch & Deployment & \texttt{/status/unavailableReplicas} & 0.00 & [-0.09, 0.09] & no \\
 selector-label-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/namespace} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/metadata/uid} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/progressDeadlineSeconds} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/replicas} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/revisionHistoryLimit} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/selector/matchExpressions/*/operator} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/strategy/type} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/spec/terminationGracePeriodSeconds} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/conditions/*/lastTransitionTime} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/conditions/*/lastUpdateTime} & 0.00 & [-0.09, 0.09] & control \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/conditions/*/message} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/conditions/*/reason} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/conditions/*/status} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/conditions/*/type} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/observedGeneration} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/replicas} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/unavailableReplicas} & 0.00 & [-0.09, 0.09] & no \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [-0.09, 0.09] & no \\
 service-port-crowded & Service & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
 service-port-crowded & Service & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
 service-port-crowded & Service & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
@@ -1583,7 +1762,7 @@ storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/resources/reques
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/volumeMode} & 0.00 & [-0.09, 0.09] & no \\
 storageclass-wrong-name & PersistentVolumeClaim & \texttt{/status/phase} & 0.00 & [-0.09, 0.09] & no \\
 storageclass-wrong-name & StorageClass & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
-storageclass-wrong-name & StorageClass & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
+storageclass-wrong-name & StorageClass & \textbf{\texttt{/kind}} & 0.97 & [0.84, 1.00] & signal \\
 storageclass-wrong-name & StorageClass & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 storageclass-wrong-name & StorageClass & \texttt{/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
 storageclass-wrong-name & StorageClass & \texttt{/metadata/resourceVersion} & 0.00 & [-0.09, 0.09] & control \\
@@ -1593,7 +1772,7 @@ storageclass-wrong-name & StorageClass & \texttt{/reclaimPolicy} & 0.00 & [-0.09
 storageclass-wrong-name & StorageClass & \texttt{/volumeBindingMode} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/apiVersion} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/kind} & 0.00 & [-0.09, 0.09] & no \\
-volumemount-wrong-name & Deployment & \texttt{/metadata/annotations} & 0.00 & [-0.09, 0.09] & no \\
+volumemount-wrong-name & Deployment & \texttt{/metadata/annotations} & 0.03 & [-0.07, 0.13] & no \\
 volumemount-wrong-name & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
 volumemount-wrong-name & Deployment & \texttt{/metadata/generation} & 0.00 & [-0.09, 0.09] & control \\
 volumemount-wrong-name & Deployment & \texttt{/metadata/name} & 0.00 & [-0.09, 0.09] & no \\
@@ -1607,14 +1786,14 @@ volumemount-wrong-name & Deployment & \texttt{/spec/revisionHistoryLimit} & 0.00
 volumemount-wrong-name & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxSurge} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/strategy/rollingUpdate/maxUnavailable} & 0.00 & [-0.09, 0.09] & no \\
-volumemount-wrong-name & Deployment & \texttt{/spec/strategy/type} & 0.00 & [-0.09, 0.09] & no \\
-volumemount-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & 0.00 & [-0.09, 0.09] & control \\
+volumemount-wrong-name & Deployment & \texttt{/spec/strategy/type} & 0.03 & [-0.07, 0.13] & no \\
+volumemount-wrong-name & Deployment & \texttt{/spec/template/metadata/creationTimestamp} & 0.03 & [-0.07, 0.13] & control \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/name} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/image} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/imagePullPolicy} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.00 & [-0.09, 0.09] & no \\
-volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.00 & [-0.09, 0.09] & no \\
+volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.03 & [-0.07, 0.13] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [-0.09, 0.09] & no \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/mountPath} & 0.00 & [-0.09, 0.09] & no \\
@@ -1713,9 +1892,9 @@ Scenario & Kind & Field & Recognized & 95\% CI \\
 \midrule
 clusterrolebinding-role-wrong-name & ClusterRoleBinding & \texttt{/roleRef/name} & 0.00 & [0.00, 0.09] \\
 configmap-ref-crowded & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 1.00 & [0.91, 1.00] \\
-configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.30 & [0.18, 0.45] \\
+configmap-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 1.00 & [0.91, 1.00] \\
 configmap-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/configMap/name} & 0.00 & [0.00, 0.09] \\
-daemonset-selector-mismatch & DaemonSet & \texttt{/spec/selector/matchLabels} & 1.00 & [0.91, 1.00] \\
+daemonset-selector-mismatch & DaemonSet & \texttt{/spec/selector/matchLabels} & 0.05 & [0.01, 0.17] \\
 daemonset-selector-mismatch & DaemonSet & \texttt{/spec/template/metadata/labels} & 1.00 & [0.91, 1.00] \\
 env-key-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/env/*/valueFrom/configMapKeyRef/key} & 1.00 & [0.91, 1.00] \\
 hpa-target-wrong-name & HorizontalPodAutoscaler & \texttt{/spec/scaleTargetRef/name} & 0.00 & [0.00, 0.09] \\
@@ -1723,27 +1902,33 @@ imagepull-secret-wrong-name & Deployment & \texttt{/spec/template/spec/imagePull
 ingress-backend-wrong-name & Ingress & \texttt{/spec/rules/*/http/paths/*/backend/service/name} & 1.00 & [0.91, 1.00] \\
 ingress-backend-wrong-port & Ingress & \texttt{/spec/rules/*/http/paths/*/backend/service/port/number} & 1.00 & [0.91, 1.00] \\
 job-secret-wrong-name & Job & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 1.00 & [0.91, 1.00] \\
+networkpolicy-port-mismatch & NetworkPolicy & \texttt{/spec/ingress/*/ports/*/port} & 1.00 & [0.91, 1.00] \\
 networkpolicy-selector-mismatch & NetworkPolicy & \texttt{/spec/podSelector/matchLabels} & 1.00 & [0.91, 1.00] \\
+pdb-selector-mismatch & PodDisruptionBudget & \texttt{/spec/selector/matchLabels} & 0.00 & [0.00, 0.09] \\
 priorityclass-wrong-name & Deployment & \texttt{/spec/template/spec/priorityClassName} & 1.00 & [0.91, 1.00] \\
 pvc-claim-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/persistentVolumeClaim/claimName} & 0.00 & [0.00, 0.09] \\
 replicaset-selector-mismatch & ReplicaSet & \texttt{/spec/selector/matchLabels} & 0.00 & [0.00, 0.09] \\
 replicaset-selector-mismatch & ReplicaSet & \texttt{/spec/template/metadata/labels} & 1.00 & [0.91, 1.00] \\
 rolebinding-role-wrong-name & RoleBinding & \texttt{/roleRef/name} & 0.00 & [0.00, 0.09] \\
 rolebinding-subject-wrong-name & RoleBinding & \texttt{/subjects/*/name} & 0.00 & [0.00, 0.09] \\
+rolebinding-subject-wrong-namespace & RoleBinding & \texttt{/subjects/*/namespace} & 1.00 & [0.91, 1.00] \\
 secret-ref-crowded & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 1.00 & [0.91, 1.00] \\
 secret-ref-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 1.00 & [0.91, 1.00] \\
 secret-volume-crowded & Deployment & \texttt{/spec/template/spec/volumes/*/secret/secretName} & 0.00 & [0.00, 0.09] \\
 secret-volume-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/secret/secretName} & 0.00 & [0.00, 0.09] \\
-secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.35 & [0.22, 0.50] \\
-selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.28 & [0.16, 0.43] \\
+secret-wrong-namespace & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.00 & [0.00, 0.09] \\
+selector-label-mismatch & Deployment & \texttt{/spec/selector/matchLabels} & 0.00 & [0.00, 0.09] \\
 selector-label-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 1.00 & [0.91, 1.00] \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/selector/matchExpressions/*/key} & 0.00 & [0.00, 0.09] \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/selector/matchExpressions/*/values/*} & 0.90 & [0.77, 0.96] \\
+selector-matchexpressions-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [0.00, 0.09] \\
 service-port-crowded & Service & \texttt{/spec/ports/*/targetPort} & 1.00 & [0.91, 1.00] \\
 service-port-mismatch & Service & \texttt{/spec/ports/*/targetPort} & 1.00 & [0.91, 1.00] \\
 service-selector-mismatch & Service & \texttt{/spec/selector} & 1.00 & [0.91, 1.00] \\
 service-statefulset-port-mismatch & Service & \texttt{/spec/ports/*/targetPort} & 1.00 & [0.91, 1.00] \\
-serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/serviceAccountName} & 0.47 & [0.33, 0.63] \\
+serviceaccount-wrong-name & Deployment & \texttt{/spec/template/spec/serviceAccountName} & 0.00 & [0.00, 0.09] \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/selector/matchLabels} & 1.00 & [0.91, 1.00] \\
-storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/storageClassName} & 1.00 & [0.91, 1.00] \\
+storageclass-wrong-name & PersistentVolumeClaim & \texttt{/spec/storageClassName} & 0.97 & [0.87, 1.00] \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/containers/*/volumeMounts/*/name} & 1.00 & [0.91, 1.00] \\
 vpa-target-wrong-name & VerticalPodAutoscaler & \texttt{/spec/targetRef/name} & 0.00 & [0.00, 0.09] \\
 \bottomrule
@@ -1757,20 +1942,23 @@ Scenario & Kind & Field & NoFault rate & 95\% CI & Fault rate & 95\% CI \\
 \midrule
 clusterrolebinding-role-wrong-name & ClusterRole & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 configmap-ref-crowded & ConfigMap & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
-configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
+configmap-ref-wrong-name & ConfigMap & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 configmap-volume-wrong-name & ConfigMap & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 env-key-wrong-name & ConfigMap & \texttt{/data} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 hpa-target-wrong-name & Deployment & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
-imagepull-secret-wrong-name & Secret & \texttt{/metadata/name} & 0.97 & [0.87, 1.00] & 0.03 & [0.00, 0.13] \\
+imagepull-secret-wrong-name & Secret & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 ingress-backend-wrong-name & Service & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 ingress-backend-wrong-port & Service & \texttt{/spec/ports/*/port} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 job-secret-wrong-name & Secret & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
+networkpolicy-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 networkpolicy-selector-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
-priorityclass-wrong-name & PriorityClass & \texttt{/metadata/name} & 0.88 & [0.74, 0.95] & 0.12 & [0.05, 0.26] \\
+pdb-selector-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
+priorityclass-wrong-name & PriorityClass & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 pvc-claim-wrong-name & PersistentVolumeClaim & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 rolebinding-role-wrong-name & Role & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 rolebinding-subject-wrong-name & ServiceAccount & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
-secret-ref-crowded & Secret & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
+rolebinding-subject-wrong-namespace & ServiceAccount & \texttt{/metadata/namespace} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
+secret-ref-crowded & Secret & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 secret-ref-wrong-name & Secret & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 secret-volume-crowded & Secret & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 secret-volume-wrong-name & Secret & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
@@ -1779,7 +1967,7 @@ service-port-crowded & Deployment & \texttt{/spec/template/spec/containers/*/por
 service-port-mismatch & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 service-selector-mismatch & Deployment & \texttt{/spec/template/metadata/labels} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 service-statefulset-port-mismatch & StatefulSet & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
-serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
+serviceaccount-wrong-name & ServiceAccount & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 statefulset-selector-mismatch & StatefulSet & \texttt{/spec/template/metadata/labels} & 0.00 & [0.00, 0.09] & 1.00 & [0.91, 1.00] \\
 storageclass-wrong-name & StorageClass & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
 volumemount-wrong-name & Deployment & \texttt{/spec/template/spec/volumes/*/name} & 1.00 & [0.91, 1.00] & 0.00 & [0.00, 0.09] \\
@@ -1810,7 +1998,7 @@ healthy-bundle & Deployment & \texttt{/metadata/annotations} & 0.00 & [0.00, 0.0
 healthy-bundle & Deployment & \texttt{/metadata/creationTimestamp} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/metadata/generation} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] \\
-healthy-bundle & Deployment & \texttt{/metadata/namespace} & 1.00 & [0.91, 1.00] \\
+healthy-bundle & Deployment & \texttt{/metadata/namespace} & 0.95 & [0.83, 0.99] \\
 healthy-bundle & Deployment & \texttt{/metadata/labels} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/metadata/resourceVersion} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/metadata/uid} & 0.00 & [0.00, 0.09] \\
@@ -1831,7 +2019,7 @@ healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/terminati
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/configMapRef/name} & 0.00 & [0.00, 0.09] \\
-healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.72 & [0.57, 0.84] \\
+healthy-bundle & Deployment & \texttt{/spec/template/spec/containers/*/envFrom/*/secretRef/name} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & Deployment & \texttt{/spec/template/spec/schedulerName} & 0.00 & [0.00, 0.09] \\
@@ -1850,8 +2038,8 @@ healthy-bundle & Deployment & \texttt{/status/updatedReplicas} & 0.00 & [0.00, 0
 healthy-bundle & ConfigMap & \texttt{/apiVersion} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & ConfigMap & \texttt{/kind} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & ConfigMap & \texttt{/metadata/creationTimestamp} & 0.00 & [0.00, 0.09] \\
-healthy-bundle & ConfigMap & \texttt{/metadata/name} & 0.00 & [0.00, 0.09] \\
-healthy-bundle & ConfigMap & \texttt{/metadata/namespace} & 0.00 & [0.00, 0.09] \\
+healthy-bundle & ConfigMap & \texttt{/metadata/name} & 1.00 & [0.91, 1.00] \\
+healthy-bundle & ConfigMap & \texttt{/metadata/namespace} & 1.00 & [0.91, 1.00] \\
 healthy-bundle & ConfigMap & \texttt{/metadata/resourceVersion} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & ConfigMap & \texttt{/metadata/uid} & 0.00 & [0.00, 0.09] \\
 healthy-bundle & ConfigMap & \texttt{/data} & 0.00 & [0.00, 0.09] \\
@@ -1924,7 +2112,7 @@ healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/resour
 healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/resources/requests/memory} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePath} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/terminationMessagePolicy} & 0.00 & [0.00, 0.09] \\
-healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 0.00 & [0.00, 0.09] \\
+healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/containerPort} & 1.00 & [0.91, 1.00] \\
 healthy-web-stack & Deployment & \texttt{/spec/template/spec/containers/*/ports/*/protocol} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & Deployment & \texttt{/spec/template/spec/dnsPolicy} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & Deployment & \texttt{/spec/template/spec/restartPolicy} & 0.00 & [0.00, 0.09] \\
@@ -1971,7 +2159,7 @@ healthy-web-stack & HorizontalPodAutoscaler & \texttt{/metadata/resourceVersion}
 healthy-web-stack & HorizontalPodAutoscaler & \texttt{/metadata/uid} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/scaleTargetRef/apiVersion} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/scaleTargetRef/kind} & 0.00 & [0.00, 0.09] \\
-healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/scaleTargetRef/name} & 0.00 & [0.00, 0.09] \\
+healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/scaleTargetRef/name} & 0.95 & [0.83, 0.99] \\
 healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/minReplicas} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/maxReplicas} & 0.00 & [0.00, 0.09] \\
 healthy-web-stack & HorizontalPodAutoscaler & \texttt{/spec/metrics/*/type} & 0.00 & [0.00, 0.09] \\
