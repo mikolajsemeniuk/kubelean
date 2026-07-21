@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -87,12 +88,19 @@ type chatCompletionResponse struct {
 // --max-model-len on the server is >= your -num-ctx flag.
 func (v *VLLM) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	body := chatCompletionRequest{
-		Model:              in.Model,
-		Messages:           []chatMessage{{Role: "user", Content: in.Prompt}},
-		Temperature:        in.Options.Temperature,
-		Seed:               in.Options.Seed,
-		MaxTokens:          in.Options.NumPredict,
-		ChatTemplateKwargs: map[string]any{"enable_thinking": false},
+		Model:       in.Model,
+		Messages:    []chatMessage{{Role: "user", Content: in.Prompt}},
+		Temperature: in.Options.Temperature,
+		Seed:        in.Options.Seed,
+		MaxTokens:   in.Options.NumPredict,
+	}
+	// enable_thinking=false is needed only by hybrid-thinking families (Qwen3,
+	// GLM); plain Jinja templates ignore the unknown kwarg, but vLLM's
+	// MistralTokenizer rejects the whole request over ANY chat_template_kwargs
+	// ("chat_template is not supported for Mistral tokenizers"), so it must
+	// not be sent unconditionally.
+	if strings.HasPrefix(in.Model, "qwen3") || strings.HasPrefix(in.Model, "glm") {
+		body.ChatTemplateKwargs = map[string]any{"enable_thinking": false}
 	}
 	if in.Format != nil {
 		body.ResponseFormat = &responseFormat{
