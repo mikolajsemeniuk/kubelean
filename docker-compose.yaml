@@ -104,47 +104,6 @@ services:
       - glm45
       - --trust-remote-code
 
-  codellama:
-    image: vllm/vllm-openai:v0.20.0-cu130
-    profiles: ["codellama"]
-    network_mode: host
-    ipc: host
-    volumes:
-      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
-      - vllm-cache:/root/.cache/vllm
-    environment:
-      - HF_TOKEN=${HF_TOKEN:-}
-      - VLLM_USE_MODELSCOPE=false
-      - MAX_JOBS=4
-      - SAFETENSORS_FAST_GPU=1
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    stop_grace_period: 60s
-    command:
-      - --model
-      - codellama/CodeLlama-13b-Instruct-hf
-      - --served-model-name
-      - codellama
-      - --host
-      - 0.0.0.0
-      - --port
-      - "12000"
-      - --gpu-memory-utilization
-      - "0.90"
-      - --max-model-len
-      - "16384"
-      - --max-num-seqs
-      - "32"
-      - --compilation-config
-      - '{"cudagraph_mode": "none"}'
-      - --enable-prefix-caching
-      - --enable-chunked-prefill
-
   qwen2.5:
     image: vllm/vllm-openai:v0.20.0-cu130
     profiles: ["qwen2.5"]
@@ -189,15 +148,16 @@ services:
       - --tool-call-parser
       - hermes
 
-  # Qwen3-14B — the codellama-13b replacement in the model ladder (codellama
-  # gated out on ALL 33 faulty scenarios at K=40, contributing zero scored
-  # data). Dense 14B ≈ gemma-12B runtime; hybrid-thinking model, but
-  # pkg/providers/vllm.go sends chat_template_kwargs {"enable_thinking": false}
-  # so responses stay compact JSON within -num-predict. served-model-name uses
-  # the Ollama-style tag so `make run-all MODEL=qwen3:14b` namespaces shards to
-  # data/qwen3-14b/ like the other models.
+  # Official block-wise FP8 checkpoint ("nearly identical" to bf16 per model
+  # card) - do NOT add --quantization on top. Non-thinking (client sends
+  # enable_thinking=false), so no --reasoning-parser. TRITON_ATTN: FlashInfer
+  # has an FP8 accuracy bug on Blackwell. KV cache stays bf16 (no memory
+  # pressure at 128GB; one quantization less to report). No ngram spec decode
+  # (vllm#40875 corrupts structured output; also perturbs per-seed sampling).
+  # Image `latest`, not v0.20.0-cu130: stock v0.20.0 lacks sm_121 FP8 kernels
+  # on aarch64; `latest` is proven on this box by the gemma fp8 run.
   qwen3-14b:
-    image: vllm/vllm-openai:v0.20.0-cu130
+    image: vllm/vllm-openai:latest
     profiles: ["qwen3-14b"]
     network_mode: host
     ipc: host
@@ -209,6 +169,8 @@ services:
       - VLLM_USE_MODELSCOPE=false
       - MAX_JOBS=4
       - SAFETENSORS_FAST_GPU=1
+      # sm121: Marlin-fallback race gives silently WRONG results without this
+      - VLLM_MARLIN_USE_ATOMIC_ADD=1
     deploy:
       resources:
         reservations:
@@ -219,32 +181,29 @@ services:
     stop_grace_period: 60s
     command:
       - --model
-      - Qwen/Qwen3-14B
+      - Qwen/Qwen3-14B-FP8
       - --served-model-name
       - qwen3:14b
       - --host
       - 0.0.0.0
       - --port
       - "12000"
+      - --attention-backend
+      - TRITON_ATTN
       - --gpu-memory-utilization
-      - "0.90"
+      - "0.85"
       - --max-model-len
-      - "32768"
+      - "16384"
       - --max-num-seqs
-      - "32"
-      - --compilation-config
-      - '{"cudagraph_mode": "none"}'
-      - --enable-prefix-caching
-      - --enable-chunked-prefill
-      - --enable-auto-tool-choice
-      - --tool-call-parser
-      - hermes
+      - "64"
 
-  # Phi-4 14B — family-diverse alternative to qwen3-14b for the 4th ladder
-  # slot (Microsoft, dense 14B, no thinking): same runtime class as gemma-12B.
-  # Context is 16k (model max) — enough for -num-ctx 8192 prompts.
+  # Calibrated FP8-dynamic quant of microsoft/phi-4 by Red Hat/Neural Magic
+  # (measured 99.9% accuracy recovery vs bf16) - preferred over online
+  # --quantization fp8. Native context is 16k, hence max-model-len 16384.
+  # Same Blackwell/measurement rules as qwen3-14b: TRITON_ATTN, bf16 KV
+  # cache, no spec decode, image `latest` for sm_121 FP8 kernels.
   phi4-14b:
-    image: vllm/vllm-openai:v0.20.0-cu130
+    image: vllm/vllm-openai:latest
     profiles: ["phi4-14b"]
     network_mode: host
     ipc: host
@@ -256,6 +215,8 @@ services:
       - VLLM_USE_MODELSCOPE=false
       - MAX_JOBS=4
       - SAFETENSORS_FAST_GPU=1
+      # sm121: Marlin-fallback race gives silently WRONG results without this
+      - VLLM_MARLIN_USE_ATOMIC_ADD=1
     deploy:
       resources:
         reservations:
@@ -266,23 +227,21 @@ services:
     stop_grace_period: 60s
     command:
       - --model
-      - microsoft/phi-4
+      - RedHatAI/phi-4-FP8-dynamic
       - --served-model-name
       - phi4:14b
       - --host
       - 0.0.0.0
       - --port
       - "12000"
+      - --attention-backend
+      - TRITON_ATTN
       - --gpu-memory-utilization
-      - "0.90"
+      - "0.85"
       - --max-model-len
       - "16384"
       - --max-num-seqs
-      - "32"
-      - --compilation-config
-      - '{"cudagraph_mode": "none"}'
-      - --enable-prefix-caching
-      - --enable-chunked-prefill
+      - "64"
 
   gemma-4:
     image: vllm/vllm-openai:latest
@@ -329,52 +288,14 @@ services:
       - --speculative-config
       - '{"method": "ngram", "num_speculative_tokens": 4, "prompt_lookup_min": 2, "prompt_lookup_max": 5}'
 
-  lfm2.5:
-    image: vllm/vllm-openai:v0.20.0-cu130
-    profiles: ["lfm2.5"]
-    network_mode: host
-    ipc: host
-    volumes:
-      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
-      - vllm-cache:/root/.cache/vllm
-    environment:
-      - HF_TOKEN=${HF_TOKEN:-}
-      - VLLM_USE_MODELSCOPE=false
-      - MAX_JOBS=4
-      - SAFETENSORS_FAST_GPU=1
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    stop_grace_period: 60s
-    command:
-      - --model
-      - LiquidAI/LFM2.5-8B-A1B
-      - --served-model-name
-      - lfm2.5
-      - --host
-      - 0.0.0.0
-      - --port
-      - "12000"
-      - --gpu-memory-utilization
-      - "0.90"
-      - --max-model-len
-      - "32768"
-      - --max-num-seqs
-      - "128"
-      - --compilation-config
-      - '{"cudagraph_mode": "none"}'
-      - --trust-remote-code
-      - --quantization
-      - fp8
-      - --kv-cache-dtype
-      - fp8_e4m3
-
+  # The official 2512 checkpoint is ALREADY natively FP8 (fine-grained, no
+  # quality loss per model card) - never add --quantization fp8 on top; the
+  # bf16 twin is the separate -BF16 repo. The three mistral-format flags are
+  # the canonical vLLM recipe for this model and must stay. Tool parser
+  # dropped (unused by the producer). Same Blackwell/measurement rules as
+  # qwen3-14b: TRITON_ATTN, bf16 KV cache, no spec decode, image `latest`.
   ministral-3:
-    image: vllm/vllm-openai:v0.20.0-cu130
+    image: vllm/vllm-openai:latest
     profiles: ["ministral-3"]
     network_mode: host
     ipc: host
@@ -386,6 +307,8 @@ services:
       - VLLM_USE_MODELSCOPE=false
       - MAX_JOBS=4
       - SAFETENSORS_FAST_GPU=1
+      # sm121: Marlin-fallback race gives silently WRONG results without this
+      - VLLM_MARLIN_USE_ATOMIC_ADD=1
     deploy:
       resources:
         reservations:
@@ -403,22 +326,19 @@ services:
       - 0.0.0.0
       - --port
       - "12000"
+      - --attention-backend
+      - TRITON_ATTN
       - --gpu-memory-utilization
-      - "0.90"
+      - "0.85"
       - --max-model-len
-      - "32768"
+      - "16384"
       - --max-num-seqs
-      - "32"
+      - "64"
       - --tokenizer-mode
       - mistral
       - --config-format
       - mistral
       - --load-format
-      - mistral
-      - --compilation-config
-      - '{"cudagraph_mode": "none"}'
-      - --enable-auto-tool-choice
-      - --tool-call-parser
       - mistral
 
 volumes:
