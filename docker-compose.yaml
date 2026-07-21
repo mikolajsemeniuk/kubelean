@@ -240,6 +240,50 @@ services:
       - --tool-call-parser
       - hermes
 
+  # Phi-4 14B — family-diverse alternative to qwen3-14b for the 4th ladder
+  # slot (Microsoft, dense 14B, no thinking): same runtime class as gemma-12B.
+  # Context is 16k (model max) — enough for -num-ctx 8192 prompts.
+  phi4-14b:
+    image: vllm/vllm-openai:v0.20.0-cu130
+    profiles: ["phi4-14b"]
+    network_mode: host
+    ipc: host
+    volumes:
+      - /home/mikolajsemeniuk/.cache/huggingface:/root/.cache/huggingface
+      - vllm-cache:/root/.cache/vllm
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_MODELSCOPE=false
+      - MAX_JOBS=4
+      - SAFETENSORS_FAST_GPU=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stop_grace_period: 60s
+    command:
+      - --model
+      - microsoft/phi-4
+      - --served-model-name
+      - phi4:14b
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12000"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "16384"
+      - --max-num-seqs
+      - "32"
+      - --compilation-config
+      - '{"cudagraph_mode": "none"}'
+      - --enable-prefix-caching
+      - --enable-chunked-prefill
+
   gemma-4:
     image: vllm/vllm-openai:latest
     profiles: ["gemma-4"]
